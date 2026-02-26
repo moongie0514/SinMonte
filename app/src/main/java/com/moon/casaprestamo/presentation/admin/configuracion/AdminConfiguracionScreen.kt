@@ -1,0 +1,32 @@
+package com.moon.casaprestamo.presentation.admin.configuracion
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+
+@Composable
+fun AdminConfiguracionScreen(
+    viewModel: ConfigAdminViewModel = hiltViewModel()
+) {
+    val uiState = viewModel.uiState
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+    ) {
+        AdminConfiguracionContent(
+            state = uiState,
+            onTasaChange = viewModel::onTasaChange,
+            onPlazoChange = { viewModel.onPlazoChange(it.toString()) },
+            onMinimoChange = viewModel::onMinimoChange,
+            onMaximoChange = viewModel::onMaximoChange,
+            onGuardar = { viewModel.guardarCambios() }
+        )
+    }
+}
