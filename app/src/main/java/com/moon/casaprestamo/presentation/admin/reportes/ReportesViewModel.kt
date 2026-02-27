@@ -39,19 +39,21 @@ class ReportesViewModel @Inject constructor(
                     val stats = response.body()!!
 
                     Log.d("REPORTES_VM", "✅ Estadísticas obtenidas:")
-                    Log.d("REPORTES_VM", "  - Total Clientes: ${stats.totalClientes}")
-                    Log.d("REPORTES_VM", "  - Préstamos Activos: ${stats.prestamosActivos}")
-                    Log.d("REPORTES_VM", "  - Capital Otorgado: ${stats.capitalOtorgado}")
-                    Log.d("REPORTES_VM", "  - Saldo Pendiente: ${stats.saldoPendiente}")
-                    Log.d("REPORTES_VM", "  - Monto Recuperado: ${stats.montoRecuperado}")
+                    Log.d("REPORTES_VM", "  - Total Clientes: ${stats.clientes}")
+                    Log.d("REPORTES_VM", "  - Pendientes: ${stats.pendientes}")
+                    Log.d("REPORTES_VM", "  - Morosos: ${stats.morosos}")
+                    Log.d("REPORTES_VM", "  - Capital Activo: ${stats.capitalActivo}")
+                    Log.d("REPORTES_VM", "  - Recuperado: ${stats.recuperado}")
 
                     _uiState.update {
                         it.copy(
-                            capitalActivo = stats.capitalOtorgado,
-                            capitalRecuperado = stats.montoRecuperado,
-                            saldoPendiente = stats.saldoPendiente,
-                            prestamosActivos = stats.prestamosActivos,
-                            totalClientes = stats.totalClientes,
+                            capitalActivo = stats.capitalActivo,
+                            capitalRecuperado = stats.recuperado,
+                            saldoPendiente = 0.0,
+                            prestamosActivos = stats.pendientes + stats.morosos,
+                            prestamosPendientes = stats.pendientes,
+                            prestamosEnMora = stats.morosos,
+                            totalClientes = stats.clientes,
                             isLoading = false
                         )
                     }

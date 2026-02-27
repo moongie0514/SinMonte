@@ -54,7 +54,7 @@ class SupervisionViewModel @Inject constructor(
                     try {
                         val resp = apiService.obtenerPrestamosCliente(cliente.idUsuario)
                         if (resp.isSuccessful) {
-                            resp.body()?.prestamos
+                            resp.body()
                                 ?.filter { it.estado == "PENDIENTE" }
                                 ?.forEach { p ->
                                     pendientes.add(
@@ -101,7 +101,7 @@ class SupervisionViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val response = apiService.procesarPrestamo(
-                    AprobarPrestamoRequest(id_prestamo = id, aprobado = esAprobado)
+                    AprobarPrestamoRequest(idPrestamo = id, accion = if (esAprobado) "aprobar" else "rechazar")
                 )
                 if (response.isSuccessful) {
                     val msg = if (esAprobado) "Prestamo aprobado" else "Prestamo rechazado"
