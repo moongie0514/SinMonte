@@ -42,14 +42,14 @@ interface ApiService {
     @GET("cliente/{id_cliente}/prestamos")
     suspend fun obtenerPrestamosCliente(
         @Path("id_cliente") idCliente: Int
-    ): Response<PrestamosClienteResponse>
+    ): Response<List<PrestamoData>>
 
     // 8. Calendario de pagos de un préstamo
     @GET("cliente/{id_cliente}/prestamos/{id_prestamo}/pagos")
     suspend fun obtenerCalendarioPagos(
         @Path("id_cliente")   idCliente: Int,
         @Path("id_prestamo")  idPrestamo: Int
-    ): Response<CalendarioPagosResponse>
+    ): Response<List<PagoData>>
 
     // 9. Solicitar nuevo crédito
     @POST("cliente/solicitar_credito")

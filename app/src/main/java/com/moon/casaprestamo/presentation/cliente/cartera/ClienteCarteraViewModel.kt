@@ -36,8 +36,7 @@ class ClienteCarteraViewModel @Inject constructor(
                 Log.d(TAG, "HTTP ${response.code()}")
 
                 if (response.isSuccessful) {
-                    val prestamos = response.body()?.prestamos ?: emptyList()
-
+                    val prestamos = response.body() ?: emptyList()
                     // ✅ CarteraResponse ya no existe — calcular resumen localmente
                     val soloActivos = prestamos.filter { it.estado in listOf("ACTIVO", "MORA") }
 
@@ -88,7 +87,7 @@ class ClienteCarteraViewModel @Inject constructor(
                 val response = apiService.obtenerCalendarioPagos(idCliente, idPrestamo)
 
                 if (response.isSuccessful) {
-                    val pagos = response.body()?.pagos ?: emptyList()
+                    val pagos = response.body() ?: emptyList()
 
                     // Actualizar solo el préstamo correspondiente dentro de prestamosConPagos
                     _uiState.update { state ->

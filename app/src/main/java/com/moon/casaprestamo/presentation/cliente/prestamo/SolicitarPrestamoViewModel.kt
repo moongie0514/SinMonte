@@ -49,12 +49,19 @@ class SolicitarPrestamoViewModel @Inject constructor(
                 val response = apiService.obtenerConfiguracion()
                 if (response.isSuccessful && response.body() != null) {
                     val config = response.body()!!
-                    Log.d(TAG, "Config: tasa=${config.tasa_interes} min=${config.monto_minimo} max=${config.monto_maximo}")
-                    // ✅ Guarda contra 0.0: si el servidor devuelve 0, mantiene el default del UiState
+                    val items = config.configuracion
+                    fun num(clave: String): Double? =
+                        items.firstOrNull { it.clave.equals(clave, ignoreCase = true) }?.valor?.toDoubleOrNull()
+
+                    val tasa = num("tasa_interes") ?: uiState.tasaConfigurada
+                    val min = num("monto_minimo") ?: uiState.montoMinimoPermitido
+                    val max = num("monto_maximo") ?: uiState.montoMaximoPermitido
+
+                    Log.d(TAG, "Config: tasa=$tasa min=$min max=$max")
                     uiState = uiState.copy(
-                        tasaConfigurada      = if (config.tasa_interes > 0) config.tasa_interes else uiState.tasaConfigurada,
-                        montoMaximoPermitido = if (config.monto_maximo  > 0) config.monto_maximo  else uiState.montoMaximoPermitido,
-                        montoMinimoPermitido = if (config.monto_minimo  > 0) config.monto_minimo  else uiState.montoMinimoPermitido
+                        tasaConfigurada = tasa,
+                        montoMaximoPermitido = max,
+                        montoMinimoPermitido = min
                     )
                 } else {
                     Log.w(TAG, "Config no disponible: HTTP ${response.code()} — usando defaults")
