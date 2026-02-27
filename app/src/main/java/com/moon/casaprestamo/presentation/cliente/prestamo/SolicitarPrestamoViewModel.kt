@@ -48,14 +48,11 @@ class SolicitarPrestamoViewModel @Inject constructor(
             try {
                 val response = apiService.obtenerConfiguracion()
                 if (response.isSuccessful && response.body() != null) {
-                    val config = response.body()!!
-                    val items = config.configuracion
-                    fun num(clave: String): Double? =
-                        items.firstOrNull { it.clave.equals(clave, ignoreCase = true) }?.valor?.toDoubleOrNull()
+                    val item = response.body()!!.configuracion.firstOrNull()
 
-                    val tasa = num("tasa_interes") ?: uiState.tasaConfigurada
-                    val min = num("monto_minimo") ?: uiState.montoMinimoPermitido
-                    val max = num("monto_maximo") ?: uiState.montoMaximoPermitido
+                    val tasa = item?.tasaInteres ?: uiState.tasaConfigurada
+                    val min = item?.montoMinimo ?: uiState.montoMinimoPermitido
+                    val max = item?.montoMaximo ?: uiState.montoMaximoPermitido
 
                     Log.d(TAG, "Config: tasa=$tasa min=$min max=$max")
                     uiState = uiState.copy(

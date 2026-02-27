@@ -88,6 +88,10 @@ interface ApiService {
     @POST("admin/aprobar_prestamo")
     suspend fun procesarPrestamo(@Body request: AprobarPrestamoRequest): Response<GenericResponse>
 
+    // 14b. Préstamos pendientes (optimizado para supervisión)
+    @GET("admin/prestamos_pendientes")
+    suspend fun obtenerPrestamosPendientesAdmin(): Response<List<PrestamoPendienteAdmin>>
+
     // 15. Estadísticas
     @GET("admin/estadisticas")
     suspend fun obtenerEstadisticas(): Response<EstadisticasResponse>

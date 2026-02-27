@@ -6,7 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.moon.casaprestamo.data.models.*
+import com.moon.casaprestamo.data.models.ConfigAdminUiState
+import com.moon.casaprestamo.data.models.ConfiguracionRequest
 import com.moon.casaprestamo.data.network.ApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -20,7 +21,7 @@ class ConfigAdminViewModel @Inject constructor(
     var uiState by mutableStateOf(ConfigAdminUiState())
         private set
 
-    private var configIdsByKey: Map<String, Int> = emptyMap()
+    private var configId: Int = 1
 
     init {
         cargarConfiguracion()
@@ -33,18 +34,22 @@ class ConfigAdminViewModel @Inject constructor(
                 val response = apiService.obtenerConfiguracion()
 
                 if (response.isSuccessful && response.body() != null) {
-                    val config = response.body()!!
-                    val items = config.configuracion
+                    val item = response.body()!!.configuracion.firstOrNull()
 
-                    fun valorClave(clave: String): String =
-                        items.firstOrNull { it.clave.equals(clave, ignoreCase = true) }?.valor ?: ""
+                    if (item == null) {
+                        uiState = uiState.copy(
+                            isLoading = false,
+                            mensaje = "No se encontró configuración",
+                            esError = true
+                        )
+                        return@launch
+                    }
 
-                    configIdsByKey = items.associate { it.clave.lowercase() to it.idConfig }
-
-                    val tasa = valorClave("tasa_interes")
-                    val plazo = valorClave("plazo_maximo")
-                    val min = valorClave("monto_minimo")
-                    val max = valorClave("monto_maximo")
+                    configId = item.idConfig
+                    val tasa = item.tasaInteres.toString()
+                    val plazo = item.plazoMaximo.toString()
+                    val min = item.montoMinimo.toString()
+                    val max = item.montoMaximo.toString()
 
                     Log.d("CONFIG_VM", "Configuración cargada: tasa=$tasa plazo=$plazo min=$min max=$max")
 
@@ -92,39 +97,26 @@ class ConfigAdminViewModel @Inject constructor(
             uiState = uiState.copy(isLoading = true, mensaje = null)
 
             try {
-                val updates = listOf(
-                    "tasa_interes" to ConfiguracionRequest(valor = tasa.toString()),
-                    "plazo_maximo" to ConfiguracionRequest(valor = plazo.toString()),
-                    "monto_minimo" to ConfiguracionRequest(valor = minimo.toString()),
-                    "monto_maximo" to ConfiguracionRequest(valor = maximo.toString())
+                val request = ConfiguracionRequest(
+                    tasaInteres = tasa,
+                    plazoMaximo = plazo,
+                    montoMinimo = minimo,
+                    montoMaximo = maximo
                 )
+                val response = apiService.actualizarConfiguracion(configId, request)
 
-                val errores = mutableListOf<String>()
-                updates.forEach { (clave, req) ->
-                    val id = configIdsByKey[clave]
-                    if (id == null) {
-                        errores += "No existe configuración para '$clave'"
-                    } else {
-                        val response = apiService.actualizarConfiguracion(id, req)
-                        if (!response.isSuccessful) {
-                            errores += "'$clave' (HTTP ${response.code()})"
-                        }
-                    }
-                }
-
-                if (errores.isNotEmpty()) {
-                    Log.e("CONFIG_VM", "Errores al guardar: ${errores.joinToString()}")
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        mensaje = "No se pudo guardar toda la configuración",
-                        esError = true
-                    )
-                } else {
+                if (response.isSuccessful) {
                     Log.d("CONFIG_VM", "✅ Configuración guardada")
                     uiState = uiState.copy(
                         isLoading = false,
                         mensaje = "✅ CONFIGURACIÓN ACTUALIZADA",
                         esError = false
+                    )
+                } else {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        mensaje = "No se pudo guardar (HTTP ${response.code()})",
+                        esError = true
                     )
                 }
             } catch (e: Exception) {
