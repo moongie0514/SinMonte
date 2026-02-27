@@ -131,6 +131,7 @@ fun EmpleadoCobranzaContent(
                     val totalPendientesDelPrestamo = pagosPorPrestamo[pago.id_prestamo]?.size ?: 1
                     PagoCard(
                         pago = pago,
+                        totalPendiente = totalPendientePrestamo(pago.id_prestamo),
                         mostrarLiquidarTodo = totalPendientesDelPrestamo > 1,  // ✅ PUNTO 3
                         onSeleccionar = { pagoSeleccionado = pago },
                         onLiquidarTodo = { prestamoALiquidar = pago }          // ✅ PUNTO 3
@@ -199,6 +200,7 @@ fun EmpleadoCobranzaContent(
     if (prestamoALiquidar != null) {
         ConfirmarLiquidacionDialog(
             pago = prestamoALiquidar!!,
+            totalPendiente = totalPendientePrestamo(prestamoALiquidar!!.id_prestamo),
             metodoPago = metodoPago,
             onMetodoChange = { metodoPago = it },
             onConfirmar = {
@@ -213,6 +215,7 @@ fun EmpleadoCobranzaContent(
 @Composable
 private fun PagoCard(
     pago: PagoPendiente,
+    totalPendiente: Double,
     mostrarLiquidarTodo: Boolean,      // ✅ PUNTO 3
     onSeleccionar: () -> Unit,
     onLiquidarTodo: () -> Unit         // ✅ PUNTO 3
@@ -290,7 +293,7 @@ private fun PagoCard(
                         color = MaterialTheme.colorScheme.outline
                     )
                     Text(
-"$${String.format("%,.2f", totalPendientePrestamo(pago.id_prestamo))}",
+"$${String.format("%,.2f", totalPendiente)}",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         color = Rojo
                     )
@@ -330,7 +333,7 @@ private fun PagoCard(
                     Icon(Icons.Default.Bolt, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(
-"LIQUIDAR TODO ($${String.format("%,.2f", totalPendientePrestamo(pago.id_prestamo))})",
+"LIQUIDAR TODO ($${String.format("%,.2f", totalPendiente)})",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black)
                     )
                 }
