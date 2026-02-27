@@ -34,6 +34,11 @@ fun EmpleadoCobranzaContent(
     var pagoSeleccionado by remember { mutableStateOf<PagoPendiente?>(null) }
     var prestamoALiquidar by remember { mutableStateOf<PagoPendiente?>(null) }  // ✅ PUNTO 3
     var metodoPago by remember { mutableStateOf("EFECTIVO") }
+    var filtroCliente by remember { mutableStateOf("") }
+
+    val pagosFiltrados = uiState.pagosPendientes.filter {
+        filtroCliente.isBlank() || it.nombreClienteUi.contains(filtroCliente, ignoreCase = true)
+    }
 
     fun totalPendientePrestamo(idPrestamo: Int): Double =
         uiState.pagosPendientes
@@ -68,7 +73,7 @@ fun EmpleadoCobranzaContent(
                 )
             }
 
-            if (uiState.pagosPendientes.isNotEmpty()) {
+            if (pagosFiltrados.isNotEmpty()) {
                 Surface(
                     color = Verde.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(16.dp)
@@ -84,7 +89,7 @@ fun EmpleadoCobranzaContent(
                             tint = Verde
                         )
                         Text(
-                            "${uiState.pagosPendientes.size} PAGOS",
+                            "${pagosFiltrados.size} PAGOS",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Black,
                                 fontSize = 10.sp
@@ -100,7 +105,7 @@ fun EmpleadoCobranzaContent(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Rojo)
             }
-        } else if (uiState.pagosPendientes.isEmpty()) {
+        } else if (pagosFiltrados.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -120,14 +125,25 @@ fun EmpleadoCobranzaContent(
                 }
             }
         } else {
+            OutlinedTextField(
+                value = filtroCliente,
+                onValueChange = { filtroCliente = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                singleLine = true,
+                label = { Text("Filtrar por cliente") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+            )
+
             // ✅ PUNTO 3: agrupamos por préstamo para saber cuántos pagos pendientes tiene cada uno
-            val pagosPorPrestamo = uiState.pagosPendientes.groupBy { it.id_prestamo }
+            val pagosPorPrestamo = pagosFiltrados.groupBy { it.id_prestamo }
 
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(uiState.pagosPendientes) { pago ->
+                items(pagosFiltrados.take(200)) { pago ->
                     val totalPendientesDelPrestamo = pagosPorPrestamo[pago.id_prestamo]?.size ?: 1
                     PagoCard(
                         pago = pago,
@@ -200,8 +216,8 @@ fun EmpleadoCobranzaContent(
     if (prestamoALiquidar != null) {
         ConfirmarLiquidacionDialog(
             pago = prestamoALiquidar!!,
-            metodoPago = metodoPago,
             totalPendiente = totalPendientePrestamo(prestamoALiquidar!!.id_prestamo),
+            metodoPago = metodoPago,
             onMetodoChange = { metodoPago = it },
             onConfirmar = {
                 onLiquidarTodo(prestamoALiquidar!!.id_prestamo, idEmpleado, metodoPago)
@@ -293,7 +309,7 @@ private fun PagoCard(
                         color = MaterialTheme.colorScheme.outline
                     )
                     Text(
-                        "$${String.format("%,.2f", totalPendiente)}",
+"$${String.format("%,.2f", totalPendiente)}",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         color = Rojo
                     )
@@ -333,7 +349,7 @@ private fun PagoCard(
                     Icon(Icons.Default.Bolt, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "LIQUIDAR TODO ($${String.format("%,.2f", totalPendiente)})",
+"LIQUIDAR TODO ($${String.format("%,.2f", totalPendiente)})",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black)
                     )
                 }
@@ -433,7 +449,7 @@ private fun ConfirmarLiquidacionDialog(
                 }
                 Text("Cliente: ${pago.nombreClienteUi}", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "Saldo total a liquidar: $${String.format("%,.2f", totalPendiente)}",
+"Saldo total a liquidar: $${String.format("%,.2f", totalPendiente)}",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Black,
                         color = Amarillo

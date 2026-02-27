@@ -20,7 +20,8 @@ data class RegistroRequest(
     val curp: String?,
     val telefono: String?,
     val direccion: String?,
-    @SerializedName("no_identificacion") val no_identificacion: String?
+    @SerializedName("no_identificacion") val no_identificacion: String?,
+    @SerializedName("fecha_nacimiento") val fecha_nacimiento: String?
 )
 
 data class VerificarEmailRequest(
@@ -51,7 +52,10 @@ data class ActualizarPerfilRequest(
 )
 
 data class ConfiguracionRequest(
-    val valor: String
+    @SerializedName("tasa_interes") val tasaInteres: Double? = null,
+    @SerializedName("plazo_maximo") val plazoMaximo: Int? = null,
+    @SerializedName("monto_minimo") val montoMinimo: Double? = null,
+    @SerializedName("monto_maximo") val montoMaximo: Double? = null
 )
 
 data class AprobarPrestamoRequest(
@@ -194,8 +198,9 @@ data class PerfilCliente(
     @SerializedName("curp")              val curp: String?,
     @SerializedName("direccion")         val direccion: String?,
     @SerializedName("no_identificacion") val noIdentificacion: String?,
-    @SerializedName("fecha_registro")    val fechaRegistro: String?,
-    @SerializedName("email_verificado")  val emailVerificado: Boolean
+    @SerializedName("fecha_nacimiento")  val fechaNacimiento: String? = null,
+    @SerializedName("fecha_registro")    val fechaRegistro: String? = null,
+    @SerializedName("email_verificado")  val emailVerificado: Boolean = false
 )
 
 // ═══════════════════════════════════════════════════════════
@@ -247,8 +252,24 @@ data class ConfiguracionResponse(
 
 data class ConfiguracionItem(
     @SerializedName("id_config") val idConfig: Int,
-    val clave: String,
-    val valor: String
+    @SerializedName("tasa_interes") val tasaInteres: Double = 0.0,
+    @SerializedName("plazo_maximo") val plazoMaximo: Int = 0,
+    @SerializedName("monto_minimo") val montoMinimo: Double = 0.0,
+    @SerializedName("monto_maximo") val montoMaximo: Double = 0.0,
+    @SerializedName("fecha_actualizacion") val fechaActualizacion: String? = null
+)
+
+data class PrestamoPendienteAdmin(
+    @SerializedName("id_prestamo") val idPrestamo: Int,
+    val folio: String? = null,
+    @SerializedName("monto_total") val montoTotal: Double,
+    @SerializedName("plazo_meses") val plazoMeses: Int,
+    @SerializedName("fecha_creacion") val fechaCreacion: String,
+    val estado: String,
+    val nombre: String? = null,
+    @SerializedName("apellido_paterno") val apellidoPaterno: String? = null,
+    val curp: String? = null,
+    val email: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════

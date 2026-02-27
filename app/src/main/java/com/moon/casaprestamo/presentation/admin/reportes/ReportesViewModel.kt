@@ -45,11 +45,15 @@ class ReportesViewModel @Inject constructor(
                     Log.d("REPORTES_VM", "  - Capital Activo: ${stats.capitalOtorgado}")
                     Log.d("REPORTES_VM", "  - Recuperado: ${stats.montoRecuperado}")
 
+                    val capitalActivo = stats.capitalOtorgado.coerceAtLeast(0.0)
+                    val capitalRecuperado = stats.montoRecuperado.coerceAtLeast(0.0)
+                    val saldoPendiente = stats.saldoPendiente.coerceAtLeast(0.0)
+
                     _uiState.update {
                         it.copy(
-                            capitalActivo = stats.capitalOtorgado,
-                            capitalRecuperado = stats.montoRecuperado,
-                            saldoPendiente = stats.saldoPendiente,
+                            capitalActivo = capitalActivo,
+                            capitalRecuperado = capitalRecuperado,
+                            saldoPendiente = saldoPendiente,
                             prestamosActivos = stats.prestamosActivos,
                             prestamosPendientes = 0,
                             prestamosEnMora = 0,

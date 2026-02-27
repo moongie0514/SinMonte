@@ -42,14 +42,14 @@ interface ApiService {
     @GET("cliente/{id_cliente}/prestamos")
     suspend fun obtenerPrestamosCliente(
         @Path("id_cliente") idCliente: Int
-    ): Response<List<PrestamoData>>
+     ): Response<List<PrestamoData>>
 
     // 8. Calendario de pagos de un préstamo
     @GET("cliente/{id_cliente}/prestamos/{id_prestamo}/pagos")
     suspend fun obtenerCalendarioPagos(
         @Path("id_cliente")   idCliente: Int,
         @Path("id_prestamo")  idPrestamo: Int
-    ): Response<List<PagoData>>
+     ): Response<List<PagoData>>
 
     // 9. Solicitar nuevo crédito
     @POST("cliente/solicitar_credito")
@@ -87,6 +87,10 @@ interface ApiService {
     // 14. Aprobar / rechazar préstamo
     @POST("admin/aprobar_prestamo")
     suspend fun procesarPrestamo(@Body request: AprobarPrestamoRequest): Response<GenericResponse>
+
+    // 14b. Préstamos pendientes (optimizado para supervisión)
+    @GET("admin/prestamos_pendientes")
+    suspend fun obtenerPrestamosPendientesAdmin(): Response<List<PrestamoPendienteAdmin>>
 
     // 15. Estadísticas
     @GET("admin/estadisticas")

@@ -26,7 +26,7 @@ fun ClienteNavGraph(
             SolicitarPrestamoScreen(idCliente = idCliente)
         }
         composable(Routes.CLIENTE_PERFIL) {
-            ClientePerfilScreen()
+            ClientePerfilScreen(idCliente = idCliente)
         }
     }
 }
