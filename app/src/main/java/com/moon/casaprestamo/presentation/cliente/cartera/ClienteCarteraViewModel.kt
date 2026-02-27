@@ -36,15 +36,15 @@ class ClienteCarteraViewModel @Inject constructor(
                 Log.d(TAG, "HTTP ${response.code()}")
 
                 if (response.isSuccessful) {
-                    val prestamos = response.body()?.prestamos ?: emptyList()
+                    val prestamos = response.body() ?: emptyList()
 
-                    // ✅ CarteraResponse ya no existe — calcular resumen localmente
-                    val soloActivos = prestamos.filter { it.estado in listOf("ACTIVO", "MORA") }
+                    val estadosVigentes = setOf("ACTIVO", "MORA", "PENDIENTE")
+                    val soloVigentes = prestamos.filter { it.estado.uppercase() in estadosVigentes }
 
-                    val capitalOtorgado  = soloActivos.sumOf { it.montoTotal }
-                    val saldoPendiente   = soloActivos.sumOf { it.saldoPendiente }
-                    val montoLiquidado   = capitalOtorgado - saldoPendiente
-                    val mesesTotales     = soloActivos.size
+                    val capitalOtorgado = prestamos.sumOf { it.montoTotal }.coerceAtLeast(0.0)
+                    val saldoPendiente = soloVigentes.sumOf { it.saldoPendiente }.coerceAtLeast(0.0)
+                    val montoLiquidado = (capitalOtorgado - saldoPendiente).coerceAtLeast(0.0)
+                    val mesesTotales = prestamos.sumOf { it.plazoMeses }
 
                     // PrestamoConPagos: lista base sin pagos — se cargan al entrar al detalle
                     val prestamosConPagos = prestamos.map { PrestamoConPagos(prestamo = it, pagos = emptyList()) }
@@ -88,7 +88,7 @@ class ClienteCarteraViewModel @Inject constructor(
                 val response = apiService.obtenerCalendarioPagos(idCliente, idPrestamo)
 
                 if (response.isSuccessful) {
-                    val pagos = response.body()?.pagos ?: emptyList()
+                    val pagos = response.body() ?: emptyList()
 
                     // Actualizar solo el préstamo correspondiente dentro de prestamosConPagos
                     _uiState.update { state ->
