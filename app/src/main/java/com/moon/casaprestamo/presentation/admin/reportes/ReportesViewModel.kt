@@ -39,21 +39,21 @@ class ReportesViewModel @Inject constructor(
                     val stats = response.body()!!
 
                     Log.d("REPORTES_VM", "✅ Estadísticas obtenidas:")
-                    Log.d("REPORTES_VM", "  - Total Clientes: ${stats.clientes}")
-                    Log.d("REPORTES_VM", "  - Pendientes: ${stats.pendientes}")
-                    Log.d("REPORTES_VM", "  - Morosos: ${stats.morosos}")
-                    Log.d("REPORTES_VM", "  - Capital Activo: ${stats.capitalActivo}")
-                    Log.d("REPORTES_VM", "  - Recuperado: ${stats.recuperado}")
+                    Log.d("REPORTES_VM", "  - Total Clientes: ${stats.totalClientes}")
+                    Log.d("REPORTES_VM", "  - Préstamos Activos: ${stats.prestamosActivos}")
+                    Log.d("REPORTES_VM", "  - Morosos: N/D (no enviado por API)")
+                    Log.d("REPORTES_VM", "  - Capital Activo: ${stats.capitalOtorgado}")
+                    Log.d("REPORTES_VM", "  - Recuperado: ${stats.montoRecuperado}")
 
                     _uiState.update {
                         it.copy(
-                            capitalActivo = stats.capitalActivo,
-                            capitalRecuperado = stats.recuperado,
-                            saldoPendiente = 0.0,
-                            prestamosActivos = stats.pendientes + stats.morosos,
-                            prestamosPendientes = stats.pendientes,
-                            prestamosEnMora = stats.morosos,
-                            totalClientes = stats.clientes,
+                            capitalActivo = stats.capitalOtorgado,
+                            capitalRecuperado = stats.montoRecuperado,
+                            saldoPendiente = stats.saldoPendiente,
+                            prestamosActivos = stats.prestamosActivos,
+                            prestamosPendientes = 0,
+                            prestamosEnMora = 0,
+                            totalClientes = stats.totalClientes,
                             isLoading = false
                         )
                     }

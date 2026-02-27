@@ -233,7 +233,7 @@ private fun PagoCard(
             ) {
                 Column {
                     Text(
-                        pago.nombre_cliente.uppercase(),
+                        pago.nombreClienteUi.uppercase(),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
                     )
                     Spacer(Modifier.height(4.dp))
@@ -357,7 +357,7 @@ private fun ConfirmarPagoDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Cliente: ${pago.nombre_cliente}", style = MaterialTheme.typography.bodyMedium)
+                Text("Cliente: ${pago.nombreClienteUi}", style = MaterialTheme.typography.bodyMedium)
                 Text(
                     "Monto: $${String.format("%,.2f", pago.monto)}",
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
@@ -428,7 +428,7 @@ private fun ConfirmarLiquidacionDialog(
                         )
                     }
                 }
-                Text("Cliente: ${pago.nombre_cliente}", style = MaterialTheme.typography.bodyMedium)
+                Text("Cliente: ${pago.nombreClienteUi}", style = MaterialTheme.typography.bodyMedium)
                 Text(
 "Saldo total a liquidar: $${String.format("%,.2f", totalPendiente)}",
                     style = MaterialTheme.typography.bodyLarge.copy(

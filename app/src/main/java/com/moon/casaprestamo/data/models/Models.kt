@@ -224,12 +224,12 @@ data class UsuarioDetalleResponse(
 )
 
 data class EstadisticasResponse(
-    val status: String,
-    @SerializedName("clientes")      val clientes: Int,
-    @SerializedName("capital_activo") val capitalActivo: Double,
-    @SerializedName("recuperado")     val recuperado: Double,
-    @SerializedName("morosos")        val morosos: Int,
-    @SerializedName("pendientes")     val pendientes: Int
+    val status: String? = null,
+    @SerializedName("total_clientes")    val totalClientes: Int = 0,
+    @SerializedName("prestamos_activos") val prestamosActivos: Int = 0,
+    @SerializedName("capital_otorgado")  val capitalOtorgado: Double = 0.0,
+    @SerializedName("saldo_pendiente")   val saldoPendiente: Double = 0.0,
+    @SerializedName("monto_recuperado")  val montoRecuperado: Double = 0.0
 )
 
 data class CrearEmpleadoResponse(
@@ -255,18 +255,24 @@ data class ConfiguracionItem(
 
 data class PagoPendiente(
     @SerializedName("id_pago")           val id_pago: Int,
-    @SerializedName("numero_pago")       val numero_pago: Int,
-    @SerializedName("monto")             val monto: Double,
-    @SerializedName("fecha_vencimiento") val fecha_vencimiento: String,
     @SerializedName("id_prestamo")       val id_prestamo: Int,
-    @SerializedName("estado")            val estado: String,
-    val folio: String,
-    val nombre: String,
-    @SerializedName("apellido_paterno")  val apellidoPaterno: String,
-    val telefono: String?
+    @SerializedName("numero_pago")       val numero_pago: Int,
+    @SerializedName("fecha_vencimiento") val fecha_vencimiento: String,
+    @SerializedName("monto")             val monto: Double,
+    @SerializedName("estado")            val estado: String? = null,
+    @SerializedName("monto_total")       val monto_total: Double? = null,
+    val folio: String? = null,
+    @SerializedName("nombre_cliente")    val nombre_cliente: String? = null,
+    val nombre: String? = null,
+    @SerializedName("apellido_paterno")  val apellidoPaterno: String? = null,
+    val telefono: String? = null
 ) {
-    val nombre_cliente: String
-        get() = "$nombre $apellidoPaterno".trim()
+    val nombreClienteUi: String
+        get() = when {
+            !nombre_cliente.isNullOrBlank() -> nombre_cliente.trim()
+            !nombre.isNullOrBlank() -> listOf(nombre, apellidoPaterno).filterNot { it.isNullOrBlank() }.joinToString(" ").trim()
+            else -> "CLIENTE"
+        }
 }
 
 data class RegistrarPagoResponse(
