@@ -41,9 +41,9 @@ class ReportesViewModel @Inject constructor(
                     Log.d("REPORTES_VM", "✅ Estadísticas obtenidas:")
                     Log.d("REPORTES_VM", "  - Total Clientes: ${stats.totalClientes}")
                     Log.d("REPORTES_VM", "  - Préstamos Activos: ${stats.prestamosActivos}")
-                    Log.d("REPORTES_VM", "  - Capital Otorgado: ${stats.capitalOtorgado}")
-                    Log.d("REPORTES_VM", "  - Saldo Pendiente: ${stats.saldoPendiente}")
-                    Log.d("REPORTES_VM", "  - Monto Recuperado: ${stats.montoRecuperado}")
+                    Log.d("REPORTES_VM", "  - Morosos: N/D (no enviado por API)")
+                    Log.d("REPORTES_VM", "  - Capital Activo: ${stats.capitalOtorgado}")
+                    Log.d("REPORTES_VM", "  - Recuperado: ${stats.montoRecuperado}")
 
                     _uiState.update {
                         it.copy(
@@ -51,6 +51,8 @@ class ReportesViewModel @Inject constructor(
                             capitalRecuperado = stats.montoRecuperado,
                             saldoPendiente = stats.saldoPendiente,
                             prestamosActivos = stats.prestamosActivos,
+                            prestamosPendientes = 0,
+                            prestamosEnMora = 0,
                             totalClientes = stats.totalClientes,
                             isLoading = false
                         )

@@ -10,6 +10,7 @@ import com.moon.casaprestamo.ui.theme.CasaPrestamoTheme
 
 @Composable
 fun AdminDashboard(
+    idAdmin: Int,
     userName: String = "ADMIN",
     onLogout: () -> Unit = {}
 ) {
@@ -40,7 +41,7 @@ fun AdminDashboard(
             }
         }
     ) {
-        AdminNavGraph(navController)
+        AdminNavGraph(navController, idAdmin = idAdmin)
     }
 }
 
@@ -48,7 +49,6 @@ fun AdminDashboard(
 @Composable
 fun AdminDashboardPreview() {
     CasaPrestamoTheme (darkTheme = false) {
-        AdminDashboard(
-        )
+        AdminDashboard(idAdmin = 1)
     }
 }

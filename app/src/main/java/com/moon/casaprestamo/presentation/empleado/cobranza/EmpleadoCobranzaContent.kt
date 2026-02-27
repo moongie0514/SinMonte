@@ -35,6 +35,11 @@ fun EmpleadoCobranzaContent(
     var prestamoALiquidar by remember { mutableStateOf<PagoPendiente?>(null) }  // ✅ PUNTO 3
     var metodoPago by remember { mutableStateOf("EFECTIVO") }
 
+    fun totalPendientePrestamo(idPrestamo: Int): Double =
+        uiState.pagosPendientes
+            .filter { it.id_prestamo == idPrestamo }
+            .sumOf { it.monto }
+
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -228,7 +233,7 @@ private fun PagoCard(
             ) {
                 Column {
                     Text(
-                        pago.nombre_cliente.uppercase(),
+                        pago.nombreClienteUi.uppercase(),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
                     )
                     Spacer(Modifier.height(4.dp))
@@ -285,7 +290,7 @@ private fun PagoCard(
                         color = MaterialTheme.colorScheme.outline
                     )
                     Text(
-                        "$${String.format("%,.2f", pago.saldo_pendiente)}",
+"$${String.format("%,.2f", totalPendientePrestamo(pago.id_prestamo))}",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         color = Rojo
                     )
@@ -325,7 +330,7 @@ private fun PagoCard(
                     Icon(Icons.Default.Bolt, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "LIQUIDAR TODO ($${String.format("%,.2f", pago.saldo_pendiente)})",
+"LIQUIDAR TODO ($${String.format("%,.2f", totalPendientePrestamo(pago.id_prestamo))})",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black)
                     )
                 }
@@ -352,7 +357,7 @@ private fun ConfirmarPagoDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Cliente: ${pago.nombre_cliente}", style = MaterialTheme.typography.bodyMedium)
+                Text("Cliente: ${pago.nombreClienteUi}", style = MaterialTheme.typography.bodyMedium)
                 Text(
                     "Monto: $${String.format("%,.2f", pago.monto)}",
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
@@ -391,6 +396,7 @@ private fun ConfirmarPagoDialog(
 @Composable
 private fun ConfirmarLiquidacionDialog(
     pago: PagoPendiente,
+    totalPendiente: Double,
     metodoPago: String,
     onMetodoChange: (String) -> Unit,
     onConfirmar: () -> Unit,
@@ -422,9 +428,9 @@ private fun ConfirmarLiquidacionDialog(
                         )
                     }
                 }
-                Text("Cliente: ${pago.nombre_cliente}", style = MaterialTheme.typography.bodyMedium)
+                Text("Cliente: ${pago.nombreClienteUi}", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "Saldo total a liquidar: $${String.format("%,.2f", pago.saldo_pendiente)}",
+"Saldo total a liquidar: $${String.format("%,.2f", totalPendiente)}",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Black,
                         color = Amarillo
