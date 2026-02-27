@@ -11,7 +11,7 @@ import com.moon.casaprestamo.presentation.admin.reportes.AdminReportesScreen
 import com.moon.casaprestamo.presentation.admin.supervision.AdminSupervisionScreen
 
 @Composable
-fun AdminNavGraph(navController: NavHostController) {
+fun AdminNavGraph(navController: NavHostController, idAdmin: Int) {
     NavHost(
         navController = navController,
         startDestination = Routes.ADMIN_REPORTES
@@ -21,7 +21,7 @@ fun AdminNavGraph(navController: NavHostController) {
         }
 
         composable(Routes.ADMIN_SUPERVISION) {
-            AdminSupervisionScreen()
+            AdminSupervisionScreen(idAprobador = idAdmin)
         }
 
         composable(Routes.ADMIN_CUENTAS) {

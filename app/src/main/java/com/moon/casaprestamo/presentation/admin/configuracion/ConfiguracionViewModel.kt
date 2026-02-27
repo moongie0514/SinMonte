@@ -6,7 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.moon.casaprestamo.data.models.*
+import com.moon.casaprestamo.data.models.ConfigAdminUiState
+import com.moon.casaprestamo.data.models.ConfiguracionRequest
 import com.moon.casaprestamo.data.network.ApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -33,16 +34,30 @@ class ConfigAdminViewModel @Inject constructor(
                 val response = apiService.obtenerConfiguracion()
 
                 if (response.isSuccessful && response.body() != null) {
-                    val config = response.body()!!
-                    configId = config.id
+                    val item = response.body()!!.configuracion.firstOrNull()
 
-                    Log.d("CONFIG_VM", "Configuración cargada: ${config.tasa_interes}%")
+                    if (item == null) {
+                        uiState = uiState.copy(
+                            isLoading = false,
+                            mensaje = "No se encontró configuración",
+                            esError = true
+                        )
+                        return@launch
+                    }
+
+                    configId = item.idConfig
+                    val tasa = item.tasaInteres.toString()
+                    val plazo = item.plazoMaximo.toString()
+                    val min = item.montoMinimo.toString()
+                    val max = item.montoMaximo.toString()
+
+                    Log.d("CONFIG_VM", "Configuración cargada: tasa=$tasa plazo=$plazo min=$min max=$max")
 
                     uiState = uiState.copy(
-                        tasaInteres = config.tasa_interes.toString(),
-                        plazoMaximo = config.plazo_maximo.toString(),
-                        montoMinimo = config.monto_minimo.toString(),
-                        montoMaximo = config.monto_maximo.toString(),
+                        tasaInteres = tasa,
+                        plazoMaximo = plazo,
+                        montoMinimo = min,
+                        montoMaximo = max,
                         isLoading = false
                     )
                 } else {
@@ -78,19 +93,16 @@ class ConfigAdminViewModel @Inject constructor(
             return
         }
 
-        val request = ConfiguracionRequest(
-            tasa_interes = tasa,
-            plazo_maximo = plazo,
-            monto_minimo = minimo,
-            monto_maximo = maximo
-        )
-
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true, mensaje = null)
 
             try {
-                Log.d("CONFIG_VM", "Guardando configuración ID: $configId")
-
+                val request = ConfiguracionRequest(
+                    tasaInteres = tasa,
+                    plazoMaximo = plazo,
+                    montoMinimo = minimo,
+                    montoMaximo = maximo
+                )
                 val response = apiService.actualizarConfiguracion(configId, request)
 
                 if (response.isSuccessful) {
@@ -101,10 +113,19 @@ class ConfigAdminViewModel @Inject constructor(
                         esError = false
                     )
                 } else {
-                    Log.e("CONFIG_VM", "❌ Error: ${response.code()}")
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        mensaje = "No se pudo guardar (HTTP ${response.code()})",
+                        esError = true
+                    )
                 }
             } catch (e: Exception) {
                 Log.e("CONFIG_VM", "💥 Error", e)
+                uiState = uiState.copy(
+                    isLoading = false,
+                    mensaje = "Error al guardar configuración",
+                    esError = true
+                )
             }
         }
     }
