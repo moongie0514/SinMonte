@@ -198,8 +198,9 @@ data class PerfilCliente(
     @SerializedName("curp")              val curp: String?,
     @SerializedName("direccion")         val direccion: String?,
     @SerializedName("no_identificacion") val noIdentificacion: String?,
-    @SerializedName("fecha_registro")    val fechaRegistro: String?,
-    @SerializedName("email_verificado")  val emailVerificado: Boolean
+    @SerializedName("fecha_nacimiento")  val fechaNacimiento: String? = null,
+    @SerializedName("fecha_registro")    val fechaRegistro: String? = null,
+    @SerializedName("email_verificado")  val emailVerificado: Boolean = false
 )
 
 // ═══════════════════════════════════════════════════════════
