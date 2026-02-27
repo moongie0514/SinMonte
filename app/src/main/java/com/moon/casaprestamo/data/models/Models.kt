@@ -57,7 +57,7 @@ data class ConfiguracionRequest(
 data class AprobarPrestamoRequest(
     @SerializedName("id_prestamo") val idPrestamo: Int,
     val accion: String,
-    @SerializedName("id_empleado") val idEmpleado: Int? = null
+    @SerializedName("id_empleado") val idEmpleado: Int
 )
 
 data class RegistrarPagoRequest(
@@ -66,10 +66,12 @@ data class RegistrarPagoRequest(
 )
 
 data class CrearEmpleadoRequest(
-    val username: String,
+    val nombre: String,
+    @SerializedName("apellido_paterno") val apellidoPaterno: String,
+    @SerializedName("apellido_materno") val apellidoMaterno: String? = null,
+    val email: String,
     val password: String,
-    val nombre_completo: String,
-    val rol: String
+    val telefono: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════
@@ -235,7 +237,7 @@ data class EstadisticasResponse(
 data class CrearEmpleadoResponse(
     val status: String,
     val message: String?,
-    @SerializedName("id_usuario") val idUsuario: Int
+    @SerializedName("id_empleado") val idEmpleado: Int
 )
 
 data class ConfiguracionResponse(
