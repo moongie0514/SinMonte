@@ -42,14 +42,14 @@ interface ApiService {
     @GET("cliente/{id_cliente}/prestamos")
     suspend fun obtenerPrestamosCliente(
         @Path("id_cliente") idCliente: Int
-    ): Response<PrestamosClienteResponse>
+     ): Response<List<PrestamoData>>
 
     // 8. Calendario de pagos de un préstamo
     @GET("cliente/{id_cliente}/prestamos/{id_prestamo}/pagos")
     suspend fun obtenerCalendarioPagos(
         @Path("id_cliente")   idCliente: Int,
         @Path("id_prestamo")  idPrestamo: Int
-    ): Response<CalendarioPagosResponse>
+     ): Response<List<PagoData>>
 
     // 9. Solicitar nuevo crédito
     @POST("cliente/solicitar_credito")
@@ -84,9 +84,25 @@ interface ApiService {
         @Path("id_usuario") idUsuario: Int
     ): Response<UsuarioDetalleResponse>
 
+    @PUT("admin/usuario/{id_usuario}")
+    suspend fun editarUsuarioAdmin(
+        @Path("id_usuario") idUsuario: Int,
+        @Body request: EditarUsuarioAdminRequest
+    ): Response<GenericResponse>
+
+    @PUT("admin/usuario/{id_usuario}/estado")
+    suspend fun cambiarEstadoUsuario(
+        @Path("id_usuario") idUsuario: Int,
+        @Query("activo") activo: Boolean
+    ): Response<GenericResponse>
+
     // 14. Aprobar / rechazar préstamo
     @POST("admin/aprobar_prestamo")
     suspend fun procesarPrestamo(@Body request: AprobarPrestamoRequest): Response<GenericResponse>
+
+    // 14b. Préstamos pendientes (optimizado para supervisión)
+    @GET("admin/prestamos_pendientes")
+    suspend fun obtenerPrestamosPendientesAdmin(): Response<List<PrestamoPendienteAdmin>>
 
     // 15. Estadísticas
     @GET("admin/estadisticas")
