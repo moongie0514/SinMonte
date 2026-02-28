@@ -3,8 +3,10 @@ package com.moon.casaprestamo.presentation.admin.cuentas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.moon.casaprestamo.data.models.UsuarioResumen
 
@@ -75,20 +76,21 @@ fun AdminCuentasContent(
         ).joinToString(" ").contains(query, ignoreCase = true)
     }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 8.dp), // Controlamos el margen externo
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    modifier = Modifier.size(44.dp),
-                    color = if (tabPersonal) Color(0xFF0B1736) else Color(0xFFB0003A),
+                    modifier = Modifier.size(40.dp),
+                    color = if (tabPersonal) Color(0xFF0B1736) else MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Icon(
@@ -98,37 +100,34 @@ fun AdminCuentasContent(
                         modifier = Modifier.padding(10.dp)
                     )
                 }
+                Spacer(Modifier.size(12.dp))
                 Text(
                     if (tabPersonal) "Gestión de Personal" else "Directorio de Clientes",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Black
+                    ),
+                    modifier = Modifier.padding(0.dp)
                 )
             }
 
             Button(
                 onClick = { showNuevo = true },
-                modifier = Modifier.size(44.dp),
-                shape = RoundedCornerShape(14.dp),
-                contentPadding = ButtonDefaults.ContentPadding,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB0003A))
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.height(36.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar", tint = Color.White)
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                Spacer(Modifier.size(6.dp))
+                Text("AGREGAR", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
-            Column(modifier = Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
@@ -143,7 +142,7 @@ fun AdminCuentasContent(
                     }
                 }
 
-                HeaderRow(modifier = Modifier.padding(horizontal = 8.dp))
+                HeaderRow()
 
                 when {
                     uiState.isLoading -> CircularProgressIndicator()
@@ -151,7 +150,6 @@ fun AdminCuentasContent(
                     else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(filtrados) { u ->
                             CuentaRow(
-                                modifier = Modifier.padding(horizontal = 8.dp),
                                 usuario = u,
                                 onEditar = { editarUsuario = u },
                                 onToggleEstado = { onToggleEstado(u.idUsuario, !u.activo) }
@@ -202,8 +200,8 @@ private fun generarClaveTemporal(length: Int = 10): String {
 }
 
 @Composable
-private fun HeaderRow(modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth()) {
+private fun HeaderRow() {
+    Row(Modifier.fillMaxWidth()) {
         Text("IDENTIDAD", modifier = Modifier.weight(1.6f), fontWeight = FontWeight.Black)
         Text("DOCS", modifier = Modifier.weight(1.1f), fontWeight = FontWeight.Black)
         Text("REGISTRO", modifier = Modifier.weight(1f), fontWeight = FontWeight.Black)
@@ -212,13 +210,8 @@ private fun HeaderRow(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CuentaRow(
-    modifier: Modifier = Modifier,
-    usuario: UsuarioResumen,
-    onEditar: () -> Unit,
-    onToggleEstado: () -> Unit
-) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun CuentaRow(usuario: UsuarioResumen, onEditar: () -> Unit, onToggleEstado: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1.6f)) {
             Text(
                 listOfNotNull(usuario.nombre, usuario.apellidoPaterno, usuario.apellidoMaterno).joinToString(" "),
@@ -227,7 +220,7 @@ private fun CuentaRow(
             Text(usuario.email, color = MaterialTheme.colorScheme.outline)
         }
         Column(modifier = Modifier.weight(1.1f)) {
-            Text(usuario.curp ?: "ACCESO SISTEMA", color = Color(0xFFB0003A), fontWeight = FontWeight.SemiBold)
+            Text(usuario.curp ?: "ACCESO SISTEMA", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
             Text("ID: ${usuario.noIdentificacion ?: "-"}", color = MaterialTheme.colorScheme.outline)
         }
         Text(usuario.fechaRegistro?.take(10) ?: "-", modifier = Modifier.weight(1f))
@@ -285,11 +278,7 @@ private fun NuevoRegistroDialog(
                         Text("Rol: $rolEmpleado")
                     }
                 }
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = clave,
                         onValueChange = {},

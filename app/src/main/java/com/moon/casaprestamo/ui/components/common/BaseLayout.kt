@@ -67,8 +67,8 @@ fun BaseLayout(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 if (screenTitle.isNotEmpty()) {
                     Text(
