@@ -84,6 +84,18 @@ interface ApiService {
         @Path("id_usuario") idUsuario: Int
     ): Response<UsuarioDetalleResponse>
 
+    @PUT("admin/usuario/{id_usuario}")
+    suspend fun editarUsuarioAdmin(
+        @Path("id_usuario") idUsuario: Int,
+        @Body request: EditarUsuarioAdminRequest
+    ): Response<GenericResponse>
+
+    @PUT("admin/usuario/{id_usuario}/estado")
+    suspend fun cambiarEstadoUsuario(
+        @Path("id_usuario") idUsuario: Int,
+        @Query("activo") activo: Boolean
+    ): Response<GenericResponse>
+
     // 14. Aprobar / rechazar préstamo
     @POST("admin/aprobar_prestamo")
     suspend fun procesarPrestamo(@Body request: AprobarPrestamoRequest): Response<GenericResponse>
