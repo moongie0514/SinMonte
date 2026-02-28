@@ -75,7 +75,18 @@ data class CrearEmpleadoRequest(
     @SerializedName("apellido_materno") val apellidoMaterno: String? = null,
     val email: String,
     val password: String,
-    val telefono: String? = null
+    val telefono: String? = null,
+    val rol: String = "Empleado"
+)
+
+data class EditarUsuarioAdminRequest(
+    val nombre: String,
+    @SerializedName("apellido_paterno") val apellidoPaterno: String,
+    @SerializedName("apellido_materno") val apellidoMaterno: String? = null,
+    val telefono: String? = null,
+    val direccion: String? = null,
+    val curp: String? = null,
+    @SerializedName("no_identificacion") val noIdentificacion: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════
@@ -218,8 +229,12 @@ data class UsuarioResumen(
     @SerializedName("id_usuario")       val idUsuario: Int,
     @SerializedName("nombre")           val nombre: String,
     @SerializedName("apellido_paterno") val apellidoPaterno: String,
+    @SerializedName("apellido_materno") val apellidoMaterno: String? = null,
     @SerializedName("email")            val email: String,
     @SerializedName("rol")              val rol: String,
+    @SerializedName("curp")             val curp: String? = null,
+    @SerializedName("no_identificacion") val noIdentificacion: String? = null,
+    @SerializedName("telefono")         val telefono: String? = null,
     @SerializedName("activo")           val activo: Boolean,
     @SerializedName("email_verificado") val emailVerificado: Boolean,
     @SerializedName("fecha_registro")   val fechaRegistro: String?
