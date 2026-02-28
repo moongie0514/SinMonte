@@ -61,22 +61,24 @@ fun BaseLayout(
         ) { paddingValues ->
 
             // CAMBIO: De LazyColumn a Column
+            val screenTitle = titleProvider(vistaActiva).trim()
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = titleProvider(vistaActiva),
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Black
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                if (screenTitle.isNotEmpty()) {
+                    Text(
+                        text = screenTitle,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Black
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
 
                 // El content() ahora puede tener su propio LazyColumn sin problemas
                 // porque este Column padre no tiene scroll propio.

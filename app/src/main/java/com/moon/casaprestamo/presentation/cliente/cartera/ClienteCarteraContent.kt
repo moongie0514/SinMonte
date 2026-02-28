@@ -31,8 +31,11 @@ fun ClienteCarteraContent(
     val colorScheme = MaterialTheme.colorScheme
 
     // 1. Extraemos los datos una sola vez para asegurar consistencia
-    val pagosVigentes = uiState.prestamosConPagos.firstOrNull()?.pagos ?: emptyList()
-    val prestamoActual = uiState.prestamosConPagos.firstOrNull()
+    val prestamoActual = uiState.prestamosConPagos.firstOrNull {
+        it.prestamo.estado.equals("ACTIVO", ignoreCase = true) ||
+            it.prestamo.estado.equals("MORA", ignoreCase = true)
+    } ?: uiState.prestamosConPagos.firstOrNull()
+    val pagosVigentes = prestamoActual?.pagos ?: emptyList()
 
     if (uiState.isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -126,6 +129,18 @@ fun ClienteCarteraContent(
         ) { pago ->
             Box(modifier = Modifier.padding(horizontal = 24.dp)) {
                 PagoRowPrototipo(pago)
+            }
+        }
+        if (pagosVigentes.isEmpty()) {
+            item {
+                Text(
+                    text = "No hay calendario disponible para este préstamo.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    color = Color(0xFF64748B),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

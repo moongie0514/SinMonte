@@ -123,6 +123,7 @@ fun AppNavigation() {
                 StandardCharsets.UTF_8.toString()
             )
             AdminDashboard(
+                idAdmin = back.arguments?.getInt("idUsuario") ?: 0,
                 userName = nombre,
                 onLogout = { navController.navigate("login") { popUpTo(0) } }
             )
