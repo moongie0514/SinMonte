@@ -89,7 +89,8 @@ class RegistroViewModel @Inject constructor(
                     curp              = state.curp.trim().uppercase().ifBlank { null },
                     telefono          = state.telefono.trim().ifBlank { null },
                     direccion         = state.direccion.trim().ifBlank { null },
-                    no_identificacion = state.ine.trim().ifBlank { null }
+                    no_identificacion = state.ine.trim().ifBlank { null },
+                    fecha_nacimiento  = state.fechaNacimiento.trim().ifBlank { null }
                 )
 
                 Log.d(TAG_REG, "POST /registrar_cliente → email: ${request.email}")

@@ -53,25 +53,24 @@ class EmpleadoCobranzaViewModel @Inject constructor(
         }
     }
 
-    fun registrarPago(idPago: Int, idEmpleado: Int, metodoPago: String) {
+    fun registrarPago(idPago: Int, idEmpleado: Int, _metodoPago: String) {
         viewModelScope.launch {
             try {
-                Log.d("COBRANZA_VM", "=== REGISTRANDO PAGO === id_pago: $idPago, empleado: $idEmpleado, método: $metodoPago")
+                Log.d("COBRANZA_VM", "=== REGISTRANDO PAGO === id_pago: $idPago, empleado: $idEmpleado, método: $_metodoPago")
 
                 val request = RegistrarPagoRequest(
                     id_pago = idPago,
-                    id_empleado = idEmpleado,
-                    metodo_pago = metodoPago
+                    id_empleado = idEmpleado
                 )
                 val response = apiService.registrarPago(request)
 
                 if (response.isSuccessful && response.body() != null) {
                     val result = response.body()!!
-                    Log.d("COBRANZA_VM", "✅ Folio: ${result.folio} | Saldo restante: ${result.nuevo_saldo}")
+                    Log.d("COBRANZA_VM", "✅ Pago registrado para préstamo ${result.idPrestamo} | Monto: ${result.monto}")
                     _uiState.update {
                         it.copy(
-                            mensaje = "✅ Pago registrado - Folio: ${result.folio}",
-                            ultimoFolio = result.folio
+                            mensaje = "✅ ${result.message}",
+                            ultimoFolio = null
                         )
                     }
                     cargarPagosPendientes()
@@ -90,7 +89,7 @@ class EmpleadoCobranzaViewModel @Inject constructor(
     // ✅ PUNTO 3: Liquidación total — registra todos los pagos pendientes
     // del préstamo en secuencia. El servidor calcula saldos y marca
     // el préstamo como LIQUIDADO automáticamente al llegar a 0.
-    fun liquidarTodo(idPrestamo: Int, idEmpleado: Int, metodoPago: String) {
+    fun liquidarTodo(idPrestamo: Int, idEmpleado: Int, _metodoPago: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
@@ -106,22 +105,19 @@ class EmpleadoCobranzaViewModel @Inject constructor(
 
                 Log.d("COBRANZA_VM", "=== LIQUIDANDO TOTAL === ${pagosDePrestamo.size} pagos del préstamo $idPrestamo")
 
-                var ultimoFolioGenerado = ""
                 var pagosRegistrados = 0
                 var errorEncontrado = false
 
                 for (pago in pagosDePrestamo) {
                     val request = RegistrarPagoRequest(
                         id_pago = pago.id_pago,
-                        id_empleado = idEmpleado,
-                        metodo_pago = metodoPago
+                        id_empleado = idEmpleado
                     )
                     val response = apiService.registrarPago(request)
 
                     if (response.isSuccessful && response.body() != null) {
-                        ultimoFolioGenerado = response.body()!!.folio
                         pagosRegistrados++
-                        Log.d("COBRANZA_VM", "✅ Pago ${pago.numero_pago} liquidado | Folio: $ultimoFolioGenerado")
+                        Log.d("COBRANZA_VM", "✅ Pago ${pago.numero_pago} liquidado")
                     } else {
                         Log.e("COBRANZA_VM", "❌ Falló pago ${pago.numero_pago}: ${response.code()}")
                         errorEncontrado = true
@@ -133,8 +129,8 @@ class EmpleadoCobranzaViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            mensaje = "✅ Préstamo liquidado ($pagosRegistrados pagos) - Último folio: $ultimoFolioGenerado",
-                            ultimoFolio = ultimoFolioGenerado
+                            mensaje = "✅ Préstamo liquidado ($pagosRegistrados pagos)",
+                            ultimoFolio = null
                         )
                     }
                 } else {
