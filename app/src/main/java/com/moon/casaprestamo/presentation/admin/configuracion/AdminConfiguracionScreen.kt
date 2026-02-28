@@ -18,7 +18,6 @@ fun AdminConfiguracionScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp)
     ) {
         AdminConfiguracionContent(
             state = uiState,

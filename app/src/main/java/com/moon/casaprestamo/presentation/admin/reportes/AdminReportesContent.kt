@@ -41,8 +41,8 @@ fun AdminReportesContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // HEADER
         Row(
@@ -58,13 +58,6 @@ fun AdminReportesContent(
                         letterSpacing = 1.5.sp
                     ),
                     color = MaterialTheme.colorScheme.outline
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    "Resumen Ejecutivo",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Black
-                    )
                 )
             }
         }
