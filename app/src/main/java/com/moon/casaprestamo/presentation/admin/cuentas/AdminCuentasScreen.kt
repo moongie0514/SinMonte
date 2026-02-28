@@ -19,7 +19,6 @@ fun AdminCuentasScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .offset(y = (-8).dp)
     ) {
         AdminCuentasContent(
             uiState = uiState,
