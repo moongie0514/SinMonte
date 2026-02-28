@@ -48,13 +48,17 @@ class SolicitarPrestamoViewModel @Inject constructor(
             try {
                 val response = apiService.obtenerConfiguracion()
                 if (response.isSuccessful && response.body() != null) {
-                    val config = response.body()!!
-                    Log.d(TAG, "Config: tasa=${config.tasa_interes} min=${config.monto_minimo} max=${config.monto_maximo}")
-                    // ✅ Guarda contra 0.0: si el servidor devuelve 0, mantiene el default del UiState
+                    val item = response.body()!!.configuracion.firstOrNull()
+
+                    val tasa = item?.tasaInteres ?: uiState.tasaConfigurada
+                    val min = item?.montoMinimo ?: uiState.montoMinimoPermitido
+                    val max = item?.montoMaximo ?: uiState.montoMaximoPermitido
+
+                    Log.d(TAG, "Config: tasa=$tasa min=$min max=$max")
                     uiState = uiState.copy(
-                        tasaConfigurada      = if (config.tasa_interes > 0) config.tasa_interes else uiState.tasaConfigurada,
-                        montoMaximoPermitido = if (config.monto_maximo  > 0) config.monto_maximo  else uiState.montoMaximoPermitido,
-                        montoMinimoPermitido = if (config.monto_minimo  > 0) config.monto_minimo  else uiState.montoMinimoPermitido
+                        tasaConfigurada = tasa,
+                        montoMaximoPermitido = max,
+                        montoMinimoPermitido = min
                     )
                 } else {
                     Log.w(TAG, "Config no disponible: HTTP ${response.code()} — usando defaults")
@@ -127,10 +131,9 @@ class SolicitarPrestamoViewModel @Inject constructor(
                 Log.d(TAG, "HTTP ${response.code()}")
 
                 if (response.isSuccessful && response.body()?.status == "success") {
-                    val body = response.body()!!
                     uiState = uiState.copy(
                         isLoading     = false,
-                        resultado     = "✅ SOLICITUD ENVIADA — Cuota estimada: $${String.format("%,.2f", body.cuotaMensual)}/mes",
+                        resultado     = "✅ SOLICITUD ENVIADA — Un empleado la revisará pronto.",
                         monto         = "",
                         plazoMeses    = 12,
                         cuotaEstimada = null

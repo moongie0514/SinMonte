@@ -20,7 +20,8 @@ data class RegistroRequest(
     val curp: String?,
     val telefono: String?,
     val direccion: String?,
-    @SerializedName("no_identificacion") val no_identificacion: String?
+    @SerializedName("no_identificacion") val no_identificacion: String?,
+    @SerializedName("fecha_nacimiento") val fecha_nacimiento: String?
 )
 
 data class VerificarEmailRequest(
@@ -51,28 +52,41 @@ data class ActualizarPerfilRequest(
 )
 
 data class ConfiguracionRequest(
-    val tasa_interes: Double,
-    val plazo_maximo: Int,
-    val monto_minimo: Double,
-    val monto_maximo: Double
+    @SerializedName("tasa_interes") val tasaInteres: Double? = null,
+    @SerializedName("plazo_maximo") val plazoMaximo: Int? = null,
+    @SerializedName("monto_minimo") val montoMinimo: Double? = null,
+    @SerializedName("monto_maximo") val montoMaximo: Double? = null
 )
 
 data class AprobarPrestamoRequest(
-    val id_prestamo: Int,
-    val aprobado: Boolean
+    @SerializedName("id_prestamo") val idPrestamo: Int,
+    val accion: String,
+    @SerializedName("id_empleado") val idEmpleado: Int
 )
 
 data class RegistrarPagoRequest(
     @SerializedName("id_pago")     val id_pago: Int,
-    @SerializedName("id_empleado") val id_empleado: Int,
-    @SerializedName("metodo_pago") val metodo_pago: String   // EFECTIVO | TRANSFERENCIA | TARJETA
+    @SerializedName("id_empleado") val id_empleado: Int
 )
 
 data class CrearEmpleadoRequest(
-    val username: String,
+    val nombre: String,
+    @SerializedName("apellido_paterno") val apellidoPaterno: String,
+    @SerializedName("apellido_materno") val apellidoMaterno: String? = null,
+    val email: String,
     val password: String,
-    val nombre_completo: String,
-    val rol: String
+    val telefono: String? = null,
+    val rol: String = "Empleado"
+)
+
+data class EditarUsuarioAdminRequest(
+    val nombre: String,
+    @SerializedName("apellido_paterno") val apellidoPaterno: String,
+    @SerializedName("apellido_materno") val apellidoMaterno: String? = null,
+    val telefono: String? = null,
+    val direccion: String? = null,
+    val curp: String? = null,
+    @SerializedName("no_identificacion") val noIdentificacion: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════
@@ -172,10 +186,10 @@ data class PagoData(
 data class SolicitudCreditoResponse(
     val status: String,
     val message: String,
-    @SerializedName("id_prestamo")   val idPrestamo: Int,
-    @SerializedName("cuota_mensual") val cuotaMensual: Double,
-    @SerializedName("plazo_meses")   val plazoMeses: Int,
-    @SerializedName("monto")         val monto: Double,
+    @SerializedName("id_prestamo")   val idPrestamo: Int? = null,
+    @SerializedName("cuota_mensual") val cuotaMensual: Double? = null,
+    @SerializedName("plazo_meses")   val plazoMeses: Int? = null,
+    @SerializedName("monto")         val monto: Double? = null,
     val detail: String? = null
 )
 
@@ -195,8 +209,9 @@ data class PerfilCliente(
     @SerializedName("curp")              val curp: String?,
     @SerializedName("direccion")         val direccion: String?,
     @SerializedName("no_identificacion") val noIdentificacion: String?,
-    @SerializedName("fecha_registro")    val fechaRegistro: String?,
-    @SerializedName("email_verificado")  val emailVerificado: Boolean
+    @SerializedName("fecha_nacimiento")  val fechaNacimiento: String? = null,
+    @SerializedName("fecha_registro")    val fechaRegistro: String? = null,
+    @SerializedName("email_verificado")  val emailVerificado: Boolean = false
 )
 
 // ═══════════════════════════════════════════════════════════
@@ -214,8 +229,12 @@ data class UsuarioResumen(
     @SerializedName("id_usuario")       val idUsuario: Int,
     @SerializedName("nombre")           val nombre: String,
     @SerializedName("apellido_paterno") val apellidoPaterno: String,
+    @SerializedName("apellido_materno") val apellidoMaterno: String? = null,
     @SerializedName("email")            val email: String,
     @SerializedName("rol")              val rol: String,
+    @SerializedName("curp")             val curp: String? = null,
+    @SerializedName("no_identificacion") val noIdentificacion: String? = null,
+    @SerializedName("telefono")         val telefono: String? = null,
     @SerializedName("activo")           val activo: Boolean,
     @SerializedName("email_verificado") val emailVerificado: Boolean,
     @SerializedName("fecha_registro")   val fechaRegistro: String?
@@ -227,25 +246,45 @@ data class UsuarioDetalleResponse(
 )
 
 data class EstadisticasResponse(
-    @SerializedName("total_clientes")    val totalClientes: Int,
-    @SerializedName("prestamos_activos") val prestamosActivos: Int,
-    @SerializedName("capital_otorgado")  val capitalOtorgado: Double,
-    @SerializedName("saldo_pendiente")   val saldoPendiente: Double,
-    @SerializedName("monto_recuperado")  val montoRecuperado: Double
+    val status: String? = null,
+    @SerializedName("total_clientes")    val totalClientes: Int = 0,
+    @SerializedName("prestamos_activos") val prestamosActivos: Int = 0,
+    @SerializedName("capital_otorgado")  val capitalOtorgado: Double = 0.0,
+    @SerializedName("saldo_pendiente")   val saldoPendiente: Double = 0.0,
+    @SerializedName("monto_recuperado")  val montoRecuperado: Double = 0.0
 )
 
 data class CrearEmpleadoResponse(
     val status: String,
     val message: String?,
-    @SerializedName("id_usuario") val idUsuario: Int
+    @SerializedName("id_empleado") val idEmpleado: Int
 )
 
 data class ConfiguracionResponse(
-    val id: Int,
-    val tasa_interes: Double,
-    val plazo_maximo: Int,
-    val monto_minimo: Double,
-    val monto_maximo: Double
+    val status: String,
+    val configuracion: List<ConfiguracionItem>
+)
+
+data class ConfiguracionItem(
+    @SerializedName("id_config") val idConfig: Int,
+    @SerializedName("tasa_interes") val tasaInteres: Double = 0.0,
+    @SerializedName("plazo_maximo") val plazoMaximo: Int = 0,
+    @SerializedName("monto_minimo") val montoMinimo: Double = 0.0,
+    @SerializedName("monto_maximo") val montoMaximo: Double = 0.0,
+    @SerializedName("fecha_actualizacion") val fechaActualizacion: String? = null
+)
+
+data class PrestamoPendienteAdmin(
+    @SerializedName("id_prestamo") val idPrestamo: Int,
+    val folio: String? = null,
+    @SerializedName("monto_total") val montoTotal: Double,
+    @SerializedName("plazo_meses") val plazoMeses: Int,
+    @SerializedName("fecha_creacion") val fechaCreacion: String,
+    val estado: String,
+    val nombre: String? = null,
+    @SerializedName("apellido_paterno") val apellidoPaterno: String? = null,
+    val curp: String? = null,
+    val email: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════
@@ -254,62 +293,77 @@ data class ConfiguracionResponse(
 
 data class PagoPendiente(
     @SerializedName("id_pago")           val id_pago: Int,
-    @SerializedName("numero_pago")       val numero_pago: Int,
-    @SerializedName("monto")             val monto: Double,
-    @SerializedName("fecha_vencimiento") val fecha_vencimiento: String,
     @SerializedName("id_prestamo")       val id_prestamo: Int,
-    @SerializedName("monto_total")       val monto_total: Double,
-    @SerializedName("saldo_pendiente")   val saldo_pendiente: Double,
-    @SerializedName("nombre_cliente")    val nombre_cliente: String,
-    @SerializedName("telefono")          val telefono: String
-)
+    @SerializedName("numero_pago")       val numero_pago: Int,
+    @SerializedName("fecha_vencimiento") val fecha_vencimiento: String,
+    @SerializedName("monto")             val monto: Double,
+    @SerializedName("estado")            val estado: String? = null,
+    @SerializedName("monto_total")       val monto_total: Double? = null,
+    val folio: String? = null,
+    @SerializedName("nombre_cliente")    val nombre_cliente: String? = null,
+    val nombre: String? = null,
+    @SerializedName("apellido_paterno")  val apellidoPaterno: String? = null,
+    val telefono: String? = null
+) {
+    val nombreClienteUi: String
+        get() = when {
+            !nombre_cliente.isNullOrBlank() -> nombre_cliente.trim()
+            !nombre.isNullOrBlank() -> listOf(nombre, apellidoPaterno).filterNot { it.isNullOrBlank() }.joinToString(" ").trim()
+            else -> "CLIENTE"
+        }
+}
 
 data class RegistrarPagoResponse(
     val status: String,
     val message: String,
-    val folio: String,
-    @SerializedName("id_ticket")    val id_ticket: Int,
-    @SerializedName("monto_pagado") val monto_pagado: Double,
-    @SerializedName("nuevo_saldo")  val nuevo_saldo: Double
+    val monto: Double,
+    @SerializedName("id_prestamo") val idPrestamo: Int
 )
 
 data class CorteCajaResponse(
+    val status: String,
     val fecha: String,
-    @SerializedName("total_tickets")       val total_tickets: Int,
-    @SerializedName("total_efectivo")      val total_efectivo: Double,
-    @SerializedName("total_transferencia") val total_transferencia: Double,
-    @SerializedName("total_tarjeta")       val total_tarjeta: Double,
-    @SerializedName("total_general")       val total_general: Double,
-    val tickets: List<TicketDetalle>
+    @SerializedName("total_pagos")   val totalPagos: Int,
+    @SerializedName("total_cobrado") val totalCobrado: Double,
+    val movimientos: List<TicketDetalle>
 )
 
 data class TicketDetalle(
+    @SerializedName("id_ticket")       val idTicket: Int,
     val folio: String,
-    @SerializedName("metodo_pago")      val metodo_pago: String,
-    @SerializedName("monto_pagado")     val monto_pagado: Double,
-    @SerializedName("fecha_generacion") val fecha_generacion: String,
-    @SerializedName("numero_pago")      val numero_pago: Int,
-    @SerializedName("id_prestamo")      val id_prestamo: Int,
-    val cliente: String
+    @SerializedName("monto_pagado")    val montoPagado: Double,
+    @SerializedName("fecha_generacion") val fechaGeneracion: String,
+    @SerializedName("metodo_pago")     val metodoPago: String,
+    val tipo: String,
+    @SerializedName("folio_prestamo")  val folioPrestamo: String,
+    val nombre: String,
+    @SerializedName("apellido_paterno") val apellidoPaterno: String
 )
 
 data class TicketCompleto(
+    val status: String,
+    val ticket: TicketPrestamoDetalle
+)
+
+data class TicketPrestamoDetalle(
+    @SerializedName("id_prestamo")     val idPrestamo: Int,
     val folio: String,
-    @SerializedName("id_pago")          val id_pago: Int,
-    @SerializedName("id_empleado")      val id_empleado: Int,
-    @SerializedName("metodo_pago")      val metodo_pago: String,
-    @SerializedName("monto_pagado")     val monto_pagado: Double,
-    @SerializedName("firma_digital")    val firma_digital: String,
-    @SerializedName("fecha_generacion") val fecha_generacion: String,
+    @SerializedName("monto_total")     val montoTotal: Double,
+    @SerializedName("saldo_pendiente") val saldoPendiente: Double,
+    @SerializedName("tasa_interes")    val tasaInteres: Double,
+    @SerializedName("plazo_meses")     val plazoMeses: Int,
     val estado: String,
-    @SerializedName("numero_pago")      val numero_pago: Int,
-    @SerializedName("monto_cuota")      val monto_cuota: Double,
-    @SerializedName("id_prestamo")      val id_prestamo: Int,
-    @SerializedName("monto_total")      val monto_total: Double,
-    @SerializedName("saldo_pendiente")  val saldo_pendiente: Double,
-    val cliente: String,
-    val curp: String,
-    val empleado: String
+    @SerializedName("fecha_creacion")  val fechaCreacion: String,
+    @SerializedName("fecha_aprobacion") val fechaAprobacion: String?,
+    val nombre: String,
+    @SerializedName("apellido_paterno") val apellidoPaterno: String,
+    @SerializedName("apellido_materno") val apellidoMaterno: String?,
+    val curp: String?,
+    val telefono: String?,
+    val email: String,
+    @SerializedName("pagos_realizados") val pagosRealizados: Int,
+    @SerializedName("total_pagos") val totalPagos: Int,
+    val pagos: List<PagoData>
 )
 
 // ═══════════════════════════════════════════════════════════
