@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -75,16 +76,20 @@ fun AdminCuentasContent(
         ).joinToString(" ").contains(query, ignoreCase = true)
     }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp) // Controlamos el margen externo
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    modifier = Modifier.size(44.dp),
-                    color = if (tabPersonal) Color(0xFF0B1736) else Color(0xFFB0003A),
+                    modifier = Modifier.size(40.dp),
+                    color = if (tabPersonal) Color(0xFF0B1736) else MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Icon(
@@ -94,17 +99,20 @@ fun AdminCuentasContent(
                         modifier = Modifier.padding(10.dp)
                     )
                 }
+                Spacer(Modifier.size(12.dp))
                 Text(
                     if (tabPersonal) "Gestión de Personal" else "Directorio de Clientes",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(0.dp)
                 )
             }
 
             Button(
                 onClick = { showNuevo = true },
                 shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB0003A))
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.height(36.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
                 Spacer(Modifier.size(6.dp))
@@ -116,7 +124,7 @@ fun AdminCuentasContent(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = query,
@@ -210,7 +218,7 @@ private fun CuentaRow(usuario: UsuarioResumen, onEditar: () -> Unit, onToggleEst
             Text(usuario.email, color = MaterialTheme.colorScheme.outline)
         }
         Column(modifier = Modifier.weight(1.1f)) {
-            Text(usuario.curp ?: "ACCESO SISTEMA", color = Color(0xFFB0003A), fontWeight = FontWeight.SemiBold)
+            Text(usuario.curp ?: "ACCESO SISTEMA", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
             Text("ID: ${usuario.noIdentificacion ?: "-"}", color = MaterialTheme.colorScheme.outline)
         }
         Text(usuario.fechaRegistro?.take(10) ?: "-", modifier = Modifier.weight(1f))
