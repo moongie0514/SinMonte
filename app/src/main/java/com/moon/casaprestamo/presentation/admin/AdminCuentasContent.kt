@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private data class CuentasUiState(
+data class CuentasUiState(
     val isLoading: Boolean = false,
     val usuarios: List<UsuarioResumen> = emptyList(),
     val error: String? = null
