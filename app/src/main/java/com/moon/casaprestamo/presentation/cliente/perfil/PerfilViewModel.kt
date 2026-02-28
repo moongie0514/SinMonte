@@ -1,10 +1,14 @@
 package com.moon.casaprestamo.presentation.cliente.perfil
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.moon.casaprestamo.data.network.ApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ClientePerfilUiState(
@@ -22,53 +26,41 @@ data class ClientePerfilUiState(
 
 @HiltViewModel
 class PerfilViewModel @Inject constructor(
-    // private val apiService: ApiService  // ← Descomentar cuando conectes
+    private val apiService: ApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ClientePerfilUiState())
     val uiState: StateFlow<ClientePerfilUiState> = _uiState.asStateFlow()
 
-    init {
-        cargarPerfilMock()
-    }
-
-    private fun cargarPerfilMock() {
-        _uiState.value = ClientePerfilUiState(
-            idCliente = 1,
-            nombreCompleto = "Juan Pérez García",
-            curp = "PEGJ900101HDFRNN09",
-            numeroIne = "1234567890123",
-            fechaNacimiento = "01 de Enero, 1990",
-            telefono = "81 1234 5678",
-            email = "juan.perez@mail.com",
-            direccion = "Av. Constitución 123, Col. Centro, Monterrey, NL",
-            fechaRegistro = "15 de Enero, 2026",
-            isLoading = false
-        )
-    }
-
-    // TODO: Función real cuando se conecte el backend
-    /*
     fun cargarPerfil(idCliente: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val response = apiService.obtenerPerfilCliente(idCliente)
-                if (response.isSuccessful && response.body() != null) {
-                    val perfil = response.body()!!
-                    _uiState.update { it.copy(
-                        idCliente = perfil.id,
-                        nombreCompleto = perfil.nombre,
-                        curp = perfil.curp,
-                        numeroIne = perfil.ine,
-                        // ... resto de datos
-                        isLoading = false
-                    )}
+                val response = apiService.obtenerPerfil(idCliente)
+                val perfil = response.body()?.perfil
+                if (response.isSuccessful && perfil != null) {
+                    _uiState.update {
+                        it.copy(
+                            idCliente = perfil.idUsuario,
+                            nombreCompleto = listOfNotNull(perfil.nombre, perfil.apellidoPaterno, perfil.apellidoMaterno)
+                                .joinToString(" ")
+                                .trim(),
+                            curp = perfil.curp.orEmpty(),
+                            numeroIne = perfil.noIdentificacion.orEmpty(),
+                            fechaNacimiento = perfil.fechaNacimiento.orEmpty(),
+                            telefono = perfil.telefono.orEmpty(),
+                            email = perfil.email,
+                            direccion = perfil.direccion.orEmpty(),
+                            fechaRegistro = perfil.fechaRegistro.orEmpty(),
+                            isLoading = false
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
-    */
 }

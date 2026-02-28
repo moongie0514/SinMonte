@@ -66,10 +66,8 @@ fun BaseLayout(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Spacer(modifier = Modifier.height(6.dp))
-
                 Text(
                     text = titleProvider(vistaActiva),
                     style = MaterialTheme.typography.headlineMedium.copy(

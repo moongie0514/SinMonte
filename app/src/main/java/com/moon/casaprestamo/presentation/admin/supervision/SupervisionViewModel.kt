@@ -33,49 +33,28 @@ class SupervisionViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                Log.d(TAG, "=== CARGANDO CLIENTES ===")
+                val response = apiService.obtenerPrestamosPendientesAdmin()
 
-                val responseClientes = apiService.obtenerUsuarios(rol = "Cliente")
-
-                if (!responseClientes.isSuccessful) {
-                    Log.e(TAG, "Error clientes: ${responseClientes.code()}")
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Error pendientes: ${response.code()}")
                     _uiState.update {
-                        it.copy(isLoading = false, mensaje = "Error al cargar clientes")
+                        it.copy(isLoading = false, mensaje = "Error al cargar solicitudes")
                     }
                     return@launch
                 }
 
-                val clientes = responseClientes.body()?.usuarios ?: emptyList()
-                Log.d(TAG, "Clientes: ${clientes.size}")
-
-                val pendientes = mutableListOf<PrestamoSupervision>()
-
-                clientes.forEach { cliente ->
-                    try {
-                        val resp = apiService.obtenerPrestamosCliente(cliente.idUsuario)
-                        if (resp.isSuccessful) {
-                            resp.body()?.prestamos
-                                ?.filter { it.estado == "PENDIENTE" }
-                                ?.forEach { p ->
-                                    pendientes.add(
-                                        PrestamoSupervision(
-                                            idPrestamo    = p.idPrestamo,
-                                            nombreCliente = "${cliente.nombre} ${cliente.apellidoPaterno}",
-                                            curp          = cliente.email,
-                                            fechaCreacion = p.fechaCreacion,
-                                            montoTotal    = p.montoTotal,
-                                            plazoMeses    = p.plazoMeses,
-                                            estado        = p.estado
-                                        )
-                                    )
-                                }
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Error cliente ${cliente.idUsuario}: ${e.localizedMessage}")
-                    }
+                val pendientes = response.body().orEmpty().map { p ->
+                    PrestamoSupervision(
+                        idPrestamo = p.idPrestamo,
+                        nombreCliente = listOfNotNull(p.nombre, p.apellidoPaterno).joinToString(" ").trim().ifBlank { "CLIENTE" },
+                        curp = p.curp ?: "N/D",
+                        fechaCreacion = p.fechaCreacion,
+                        montoTotal = p.montoTotal,
+                        plazoMeses = p.plazoMeses,
+                        estado = p.estado
+                    )
                 }
 
-                Log.d(TAG, "Pendientes: ${pendientes.size}")
                 _uiState.update {
                     it.copy(prestamos = pendientes, isLoading = false, mensaje = null)
                 }
@@ -89,19 +68,19 @@ class SupervisionViewModel @Inject constructor(
         }
     }
 
-    fun aprobarPrestamo(id: Int) {
-        procesarPrestamo(id, true)
+    fun aprobarPrestamo(id: Int, idAprobador: Int) {
+        procesarPrestamo(id, true, idAprobador)
     }
 
-    fun rechazarPrestamo(id: Int) {
-        procesarPrestamo(id, false)
+    fun rechazarPrestamo(id: Int, idAprobador: Int) {
+        procesarPrestamo(id, false, idAprobador)
     }
 
-    private fun procesarPrestamo(id: Int, esAprobado: Boolean) {
+    private fun procesarPrestamo(id: Int, esAprobado: Boolean, idAprobador: Int) {
         viewModelScope.launch {
             try {
                 val response = apiService.procesarPrestamo(
-                    AprobarPrestamoRequest(id_prestamo = id, aprobado = esAprobado)
+                    AprobarPrestamoRequest(idPrestamo = id, accion = if (esAprobado) "aprobar" else "rechazar", idEmpleado = idAprobador)
                 )
                 if (response.isSuccessful) {
                     val msg = if (esAprobado) "Prestamo aprobado" else "Prestamo rechazado"
