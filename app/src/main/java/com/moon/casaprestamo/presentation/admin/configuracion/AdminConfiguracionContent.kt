@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -26,7 +27,7 @@ fun AdminConfiguracionContent(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -45,7 +46,7 @@ fun AdminConfiguracionContent(
                     value = state.tasaInteres,
                     onValueChange = onTasaChange,
                     icon = Icons.Default.Percent,
-                    iconColor = Color(0xFFA6032F)
+                    iconColor = MaterialTheme.colorScheme.primary
                 )
 
                 Row(

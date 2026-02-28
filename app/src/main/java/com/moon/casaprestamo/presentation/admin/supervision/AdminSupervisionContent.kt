@@ -31,32 +31,24 @@ fun AdminSupervisionContent(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = modifier.fillMaxSize().padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // HEADER
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Text(
-                    "SUPERVISIÓN DE CRÉDITOS",
+                    "APROBACIÓN DE SOLICITUDES",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.5.sp
                     ),
                     color = MaterialTheme.colorScheme.outline
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    "Aprobación de Solicitudes",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Black
-                    )
                 )
             }
 

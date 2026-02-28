@@ -2,13 +2,16 @@ package com.moon.casaprestamo.presentation.admin.cuentas
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -19,9 +22,10 @@ import androidx.compose.material.icons.filled.PersonSearch
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.moon.casaprestamo.data.models.UsuarioResumen
 
@@ -74,20 +77,26 @@ fun AdminCuentasContent(
         ).joinToString(" ").contains(query, ignoreCase = true)
     }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 8.dp), // Controlamos el margen externo
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Columna izquierda: ícono + título con sangría en wrap
             Row(
                 modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                verticalAlignment = Alignment.Top
             ) {
+                // Ícono — ancho fijo para que el texto lo respete en wrap
                 Surface(
-                    modifier = Modifier.size(44.dp),
-                    color = if (tabPersonal) Color(0xFF0B1736) else Color(0xFFB0003A),
+                    modifier = Modifier.size(60.dp),
+                    color = if (tabPersonal) Color(0xFF0B1736) else MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Icon(
@@ -97,77 +106,69 @@ fun AdminCuentasContent(
                         modifier = Modifier.padding(10.dp)
                     )
                 }
+
+                Spacer(Modifier.width(10.dp))
+
+                // Título — ocupa el resto del espacio, hace wrap con sangría natural
                 Text(
                     if (tabPersonal) "Gestión de Personal" else "Directorio de Clientes",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Black
+                    ),
+                    modifier = Modifier.align(Alignment.CenterVertically)
                 )
             }
 
+            // Columna derecha: botón contenido, no se extiende
             Button(
                 onClick = { showNuevo = true },
-                modifier = Modifier.size(44.dp),
-                shape = RoundedCornerShape(14.dp),
-                contentPadding = ButtonDefaults.ContentPadding,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB0003A))
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar", tint = Color.White)
-            }
-        }
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text(if (tabPersonal) "Buscar empleado..." else "Buscar cliente...") },
-                    leadingIcon = { Icon(Icons.Default.Search, null) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
                 )
-                IconButton(onClick = { tabPersonal = !tabPersonal }) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = "Cambiar pestaña")
-                }
+                Spacer(Modifier.width(4.dp))
             }
         }
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
-            when {
-                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.padding(16.dp))
-                uiState.error != null -> Text("Error: ${uiState.error}", modifier = Modifier.padding(16.dp))
-                else -> LazyColumn {
-                    item {
-                        HeaderRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 10.dp)
-                        )
-                        HorizontalDivider()
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text(if (tabPersonal) "Buscar empleado..." else "Buscar cliente...") },
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    IconButton(onClick = { tabPersonal = !tabPersonal }) {
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Cambiar pestaña")
                     }
-                    itemsIndexed(filtrados) { index, u ->
-                        CuentaRow(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
-                            usuario = u,
-                            onEditar = { editarUsuario = u },
-                            onToggleEstado = { onToggleEstado(u.idUsuario, !u.activo) }
-                        )
-                        if (index < filtrados.lastIndex) {
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp))
+                }
+
+                HeaderRow()
+
+                when {
+                    uiState.isLoading -> CircularProgressIndicator()
+                    uiState.error != null -> Text("Error: ${uiState.error}")
+                    else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(filtrados) { u ->
+                            CuentaRow(
+                                usuario = u,
+                                onEditar = { editarUsuario = u },
+                                onToggleEstado = { onToggleEstado(u.idUsuario, !u.activo) }
+                            )
                         }
                     }
                 }
@@ -214,53 +215,31 @@ private fun generarClaveTemporal(length: Int = 10): String {
 }
 
 @Composable
-private fun HeaderRow(modifier: Modifier = Modifier) {
-    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun HeaderRow() {
+    Row(Modifier.fillMaxWidth()) {
         Text("IDENTIDAD", modifier = Modifier.weight(1.6f), fontWeight = FontWeight.Black)
-        Text("DOCS", modifier = Modifier.weight(1.05f), fontWeight = FontWeight.Black)
-        Text("REGISTRO", modifier = Modifier.weight(0.9f), fontWeight = FontWeight.Black)
-        Text("ACCIONES", modifier = Modifier.weight(0.75f), fontWeight = FontWeight.Black)
+        Text("DOCS", modifier = Modifier.weight(1.1f), fontWeight = FontWeight.Black)
+        Text("REGISTRO", modifier = Modifier.weight(1f), fontWeight = FontWeight.Black)
+        Text("ACCIONES", modifier = Modifier.weight(0.8f), fontWeight = FontWeight.Black)
     }
 }
 
 @Composable
-private fun CuentaRow(
-    modifier: Modifier = Modifier,
-    usuario: UsuarioResumen,
-    onEditar: () -> Unit,
-    onToggleEstado: () -> Unit
-) {
-    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun CuentaRow(usuario: UsuarioResumen, onEditar: () -> Unit, onToggleEstado: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1.6f)) {
             Text(
                 listOfNotNull(usuario.nombre, usuario.apellidoPaterno, usuario.apellidoMaterno).joinToString(" "),
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                fontWeight = FontWeight.Bold
             )
-            Text(usuario.email, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(usuario.email, color = MaterialTheme.colorScheme.outline)
         }
         Column(modifier = Modifier.weight(1.1f)) {
-            Text(
-                usuario.curp ?: "ACCESO SISTEMA",
-                color = Color(0xFFB0003A),
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                "ID: ${usuario.noIdentificacion ?: "-"}",
-                color = MaterialTheme.colorScheme.outline,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Text(usuario.curp ?: "ACCESO SISTEMA", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+            Text("ID: ${usuario.noIdentificacion ?: "-"}", color = MaterialTheme.colorScheme.outline)
         }
-        Text(usuario.fechaRegistro?.take(10) ?: "-", modifier = Modifier.weight(0.9f))
-        Row(
-            modifier = Modifier.weight(0.75f),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Text(usuario.fechaRegistro?.take(10) ?: "-", modifier = Modifier.weight(1f))
+        Row(modifier = Modifier.weight(0.8f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(onClick = onEditar) { Icon(Icons.Default.Edit, contentDescription = "Editar") }
             IconButton(onClick = onToggleEstado) { Icon(Icons.Default.DeleteOutline, contentDescription = "Desactivar") }
         }
@@ -314,11 +293,7 @@ private fun NuevoRegistroDialog(
                         Text("Rol: $rolEmpleado")
                     }
                 }
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = clave,
                         onValueChange = {},
