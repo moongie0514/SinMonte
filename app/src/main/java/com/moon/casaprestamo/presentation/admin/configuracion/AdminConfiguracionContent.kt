@@ -45,7 +45,7 @@ fun AdminConfiguracionContent(
                     value = state.tasaInteres,
                     onValueChange = onTasaChange,
                     icon = Icons.Default.Percent,
-                    iconColor = Color(0xFFA6032F)
+                    iconColor = MaterialTheme.colorScheme.primary
                 )
 
                 Row(

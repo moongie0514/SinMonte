@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.moon.casaprestamo.data.models.AdminReportesUiState
 
-private val Rojo = Color(0xFFA6032F)
 private val Oscuro = Color(0xFF0F172A)
 private val Verde = Color(0xFF10B981)
 private val Azul = Color(0xFF0070BA)
@@ -34,7 +33,7 @@ fun AdminReportesContent(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = Rojo)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
         return
     }
@@ -175,7 +174,7 @@ fun AdminReportesContent(
                 modifier = Modifier.weight(1f),
                 label = "Saldo Pendiente",
                 value = "$${String.format("%,.0f", uiState.saldoPendiente)}",
-                color = Rojo
+                color = MaterialTheme.colorScheme.primary
             )
             SmallKPI(
                 modifier = Modifier.weight(1f),
