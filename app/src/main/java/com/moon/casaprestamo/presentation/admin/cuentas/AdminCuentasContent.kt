@@ -113,11 +113,16 @@ fun AdminCuentasContent(
         }
 
         Card(
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
@@ -132,7 +137,7 @@ fun AdminCuentasContent(
                     }
                 }
 
-                HeaderRow()
+                HeaderRow(modifier = Modifier.padding(horizontal = 8.dp))
 
                 when {
                     uiState.isLoading -> CircularProgressIndicator()
@@ -140,6 +145,7 @@ fun AdminCuentasContent(
                     else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(filtrados) { u ->
                             CuentaRow(
+                                modifier = Modifier.padding(horizontal = 8.dp),
                                 usuario = u,
                                 onEditar = { editarUsuario = u },
                                 onToggleEstado = { onToggleEstado(u.idUsuario, !u.activo) }
@@ -190,8 +196,8 @@ private fun generarClaveTemporal(length: Int = 10): String {
 }
 
 @Composable
-private fun HeaderRow() {
-    Row(Modifier.fillMaxWidth()) {
+private fun HeaderRow(modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth()) {
         Text("IDENTIDAD", modifier = Modifier.weight(1.6f), fontWeight = FontWeight.Black)
         Text("DOCS", modifier = Modifier.weight(1.1f), fontWeight = FontWeight.Black)
         Text("REGISTRO", modifier = Modifier.weight(1f), fontWeight = FontWeight.Black)
@@ -200,8 +206,13 @@ private fun HeaderRow() {
 }
 
 @Composable
-private fun CuentaRow(usuario: UsuarioResumen, onEditar: () -> Unit, onToggleEstado: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun CuentaRow(
+    modifier: Modifier = Modifier,
+    usuario: UsuarioResumen,
+    onEditar: () -> Unit,
+    onToggleEstado: () -> Unit
+) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1.6f)) {
             Text(
                 listOfNotNull(usuario.nombre, usuario.apellidoPaterno, usuario.apellidoMaterno).joinToString(" "),
@@ -268,7 +279,11 @@ private fun NuevoRegistroDialog(
                         Text("Rol: $rolEmpleado")
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     OutlinedTextField(
                         value = clave,
                         onValueChange = {},
