@@ -1,19 +1,15 @@
-package com.moon.casaprestamo.presentation.admin
+package com.moon.casaprestamo.presentation.admin.cuentas
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -22,6 +18,7 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PersonSearch
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -242,7 +239,7 @@ fun AdminCuentasContent(viewModel: AdminCuentasViewModel = hiltViewModel()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Surface(
                     modifier = Modifier.size(44.dp),
-                    color = if (tabPersonal) Color(0xFF0B1736) else Color(0xFFB0003A),
+                    color = if (tabPersonal) Color(0xFF0F172A) else MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Icon(
@@ -262,7 +259,7 @@ fun AdminCuentasContent(viewModel: AdminCuentasViewModel = hiltViewModel()) {
             Button(
                 onClick = { showNuevo = true },
                 shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB0003A))
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
                 Spacer(Modifier.size(6.dp))
@@ -367,7 +364,7 @@ private fun CuentaRow(
             Text(usuario.email, color = MaterialTheme.colorScheme.outline)
         }
         Column(modifier = Modifier.weight(1.1f)) {
-            Text(usuario.curp ?: "ACCESO SISTEMA", color = Color(0xFFB0003A), fontWeight = FontWeight.SemiBold)
+            Text(usuario.curp ?: "ACCESO SISTEMA", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
             Text("ID: ${usuario.noIdentificacion ?: "-"}", color = MaterialTheme.colorScheme.outline)
         }
         Text(usuario.fechaRegistro?.take(10) ?: "-", modifier = Modifier.weight(1f))
@@ -400,7 +397,7 @@ private fun NuevoRegistroDialog(
     var clave by remember { mutableStateOf("") }
     var rolEmpleado by remember { mutableStateOf("Empleado") }
 
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             Button(onClick = {
@@ -462,7 +459,7 @@ private fun EditarUsuarioDialog(
     var curp by remember(usuario.idUsuario) { mutableStateOf(usuario.curp ?: "") }
     var ine by remember(usuario.idUsuario) { mutableStateOf(usuario.noIdentificacion ?: "") }
 
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { Button(onClick = { onGuardar(nombre, apP, apM, tel, curp, ine) }) { Text("GUARDAR") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("CANCELAR") } },
