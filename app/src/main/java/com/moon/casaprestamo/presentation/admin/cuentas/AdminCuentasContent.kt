@@ -2,13 +2,14 @@ package com.moon.casaprestamo.presentation.admin.cuentas
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -87,9 +88,14 @@ fun AdminCuentasContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Columna izquierda: ícono + título con sangría en wrap
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.Top
+            ) {
+                // Ícono — ancho fijo para que el texto lo respete en wrap
                 Surface(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(60.dp),
                     color = if (tabPersonal) Color(0xFF0B1736) else MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(14.dp)
                 ) {
@@ -100,28 +106,37 @@ fun AdminCuentasContent(
                         modifier = Modifier.padding(10.dp)
                     )
                 }
-                Spacer(Modifier.size(12.dp))
+
+                Spacer(Modifier.width(10.dp))
+
+                // Título — ocupa el resto del espacio, hace wrap con sangría natural
                 Text(
                     if (tabPersonal) "Gestión de Personal" else "Directorio de Clientes",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Black
                     ),
-                    modifier = Modifier.padding(0.dp)
+                    modifier = Modifier.align(Alignment.CenterVertically)
                 )
             }
 
+            // Columna derecha: botón contenido, no se extiende
             Button(
                 onClick = { showNuevo = true },
                 shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.height(36.dp)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
-                Spacer(Modifier.size(6.dp))
-                Text("AGREGAR", color = Color.White, fontWeight = FontWeight.Bold)
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(4.dp))
             }
         }
-
         Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
