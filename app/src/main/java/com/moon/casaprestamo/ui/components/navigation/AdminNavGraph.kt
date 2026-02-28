@@ -4,8 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.moon.casaprestamo.presentation.admin.*
+import com.moon.casaprestamo.presentation.admin.cuentas.AdminCuentasScreen
+import com.moon.casaprestamo.presentation.admin.configuracion.AdminConfiguracionContent
 import com.moon.casaprestamo.presentation.admin.configuracion.AdminConfiguracionScreen
-import com.moon.casaprestamo.presentation.admin.cuentas.AdminCuentasContent
 import com.moon.casaprestamo.presentation.admin.reportes.AdminReportesScreen
 import com.moon.casaprestamo.presentation.admin.supervision.AdminSupervisionScreen
 
@@ -24,7 +26,7 @@ fun AdminNavGraph(navController: NavHostController, idAdmin: Int) {
         }
 
         composable(Routes.ADMIN_CUENTAS) {
-            AdminCuentasContent()
+            AdminCuentasScreen()
         }
 
         composable(Routes.ADMIN_CONFIGURACION) {

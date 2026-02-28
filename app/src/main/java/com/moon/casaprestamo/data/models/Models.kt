@@ -266,7 +266,7 @@ data class ConfiguracionResponse(
 )
 
 data class ConfiguracionItem(
-    @SerializedName("id") val idConfig: Int,
+    @SerializedName("id_config") val idConfig: Int,
     @SerializedName("tasa_interes") val tasaInteres: Double = 0.0,
     @SerializedName("plazo_maximo") val plazoMaximo: Int = 0,
     @SerializedName("monto_minimo") val montoMinimo: Double = 0.0,

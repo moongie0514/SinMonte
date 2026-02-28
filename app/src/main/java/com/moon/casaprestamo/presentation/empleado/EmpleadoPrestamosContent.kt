@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class PrestamosEmpleadoUiState(
+private data class PrestamosEmpleadoUiState(
     val isLoading: Boolean = false,
     val prestamos: List<PrestamoData> = emptyList(),
     val error: String? = null
