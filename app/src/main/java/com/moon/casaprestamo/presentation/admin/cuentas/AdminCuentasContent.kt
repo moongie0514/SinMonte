@@ -80,7 +80,7 @@ fun AdminCuentasContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(vertical = 8.dp), // Controlamos el margen externo
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -103,8 +103,9 @@ fun AdminCuentasContent(
                 Spacer(Modifier.size(12.dp))
                 Text(
                     if (tabPersonal) "Gestión de Personal" else "Directorio de Clientes",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Black
+                    ),
                     modifier = Modifier.padding(0.dp)
                 )
             }

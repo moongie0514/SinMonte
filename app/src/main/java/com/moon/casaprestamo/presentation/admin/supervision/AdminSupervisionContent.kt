@@ -43,19 +43,12 @@ fun AdminSupervisionContent(
         ) {
             Column {
                 Text(
-                    "SUPERVISIÓN DE CRÉDITOS",
+                    "APROBACIÓN DE SOLICITUDES",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.5.sp
                     ),
                     color = MaterialTheme.colorScheme.outline
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    "Aprobación de Solicitudes",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Black
-                    )
                 )
             }
 
