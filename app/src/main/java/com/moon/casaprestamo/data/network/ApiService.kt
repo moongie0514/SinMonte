@@ -143,4 +143,9 @@ interface ApiService {
     // 22. Buscar ticket por folio
     @GET("tickets/{folio}")
     suspend fun buscarTicket(@Path("folio") folio: String): Response<TicketCompleto>
+
+    @GET("admin/folios")
+    suspend fun obtenerFoliosAdmin(
+        @Query("fecha") fecha: String? = null
+    ): Response<CorteCajaResponse>
 }

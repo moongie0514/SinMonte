@@ -34,7 +34,7 @@ fun AdminDashboard(
         titleProvider = { route ->
             when (route) {
                 Routes.ADMIN_REPORTES -> "Analítica de Cartera"
-                Routes.ADMIN_SUPERVISION -> "Supervisión"
+                Routes.ADMIN_SUPERVISION -> ""
                 Routes.ADMIN_CUENTAS -> ""
                 Routes.ADMIN_CONFIGURACION -> "Configuración"
                 else -> ""

@@ -80,20 +80,6 @@ data class ConfigAdminUiState(
     val mensaje: String? = null,
     val esError: Boolean = false
 )
-data class AdminSupervisionUiState(
-    val prestamos: List<PrestamoSupervision> = emptyList(),
-    val isLoading: Boolean = false,
-    val mensaje: String? = null
-)
-data class PrestamoSupervision(
-    val idPrestamo:    Int,
-    val nombreCliente: String,
-    val curp:          String,
-    val fechaCreacion: String,
-    val montoTotal:    Double,
-    val plazoMeses:    Int,
-    val estado:        String
-)
 data class AdminReportesUiState(
     val capitalActivo: Double = 0.0,
     val capitalRecuperado: Double = 0.0,

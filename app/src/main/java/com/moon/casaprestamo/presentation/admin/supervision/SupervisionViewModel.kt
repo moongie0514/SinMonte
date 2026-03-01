@@ -3,9 +3,7 @@ package com.moon.casaprestamo.presentation.admin.supervision
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.moon.casaprestamo.data.models.AdminSupervisionUiState
-import com.moon.casaprestamo.data.models.AprobarPrestamoRequest
-import com.moon.casaprestamo.data.models.PrestamoSupervision
+import com.moon.casaprestamo.data.models.*
 import com.moon.casaprestamo.data.network.ApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,85 +11,242 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 import javax.inject.Inject
 
 private const val TAG = "SUPERVISION_VM"
+
+enum class SupervisionTab { CARTERA, FOLIOS, SOLICITUDES }
+
+data class CarteraAdminItem(
+    val idPrestamo: Int,
+    val folio: String,
+    val nombreCliente: String,
+    val curp: String,
+    val fechaAprobacion: String,
+    val montoTotal: Double,
+    val saldoPendiente: Double,
+    val tasaInteres: Double,
+    val plazoMeses: Int,
+    val pagosRealizados: Int,
+    val totalPagos: Int,
+    val estado: String,
+    val telefono: String?,
+    val email: String
+)
+
+data class SupervisionUiState(
+    val tab: SupervisionTab = SupervisionTab.CARTERA,
+    val recaudacionTotal: Double = 0.0,
+    val solicitudesPendientes: Int = 0,
+    val cartera: List<CarteraAdminItem> = emptyList(),
+    val carteraLoading: Boolean = false,
+    val folios: List<TicketDetalle> = emptyList(),
+    val foliosLoading: Boolean = false,
+    val solicitudes: List<PrestamoPendienteAdmin> = emptyList(),
+    val solicitudesLoading: Boolean = false,
+    val estadoCuenta: TicketPrestamoDetalle? = null,
+    val estadoCuentaLoading: Boolean = false,
+    val solicitudDetalle: PrestamoPendienteAdmin? = null,
+    val fechaDesde: String = "",
+    val fechaHasta: String = "",
+    val mensaje: String? = null,
+    val error: String? = null
+)
 
 @HiltViewModel
 class SupervisionViewModel @Inject constructor(
     private val apiService: ApiService
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AdminSupervisionUiState())
-    val uiState: StateFlow<AdminSupervisionUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(SupervisionUiState())
+    val uiState: StateFlow<SupervisionUiState> = _uiState.asStateFlow()
 
     init {
-        cargarPrestamos()
+        cargarEstadisticas()
+        cargarCartera()
+        cargarFolios()
+        cargarSolicitudes()
     }
 
-    fun cargarPrestamos() {
+    fun setTab(tab: SupervisionTab) {
+        _uiState.update { it.copy(tab = tab, mensaje = null, error = null) }
+        // FIX: refrescar recaudacion si está en 0 (ocurre al volver de otro módulo)
+        if (_uiState.value.recaudacionTotal == 0.0) cargarEstadisticas()
+        when (tab) {
+            SupervisionTab.CARTERA -> if (_uiState.value.cartera.isEmpty()) cargarCartera()
+            SupervisionTab.FOLIOS  -> cargarFolios() // siempre recargar al entrar
+            SupervisionTab.SOLICITUDES -> cargarSolicitudes()
+        }
+    }
+
+    fun setFechas(desde: String, hasta: String) {
+        _uiState.update { it.copy(fechaDesde = desde, fechaHasta = hasta) }
+    }
+
+    fun cargarEstadisticas() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             try {
-                val response = apiService.obtenerPrestamosPendientesAdmin()
-
-                if (!response.isSuccessful) {
-                    Log.e(TAG, "Error pendientes: ${response.code()}")
-                    _uiState.update {
-                        it.copy(isLoading = false, mensaje = "Error al cargar solicitudes")
-                    }
-                    return@launch
+                val r = apiService.obtenerEstadisticas()
+                if (r.isSuccessful) {
+                    _uiState.update { it.copy(recaudacionTotal = r.body()!!.montoRecuperado) }
                 }
-
-                val pendientes = response.body().orEmpty().map { p ->
-                    PrestamoSupervision(
-                        idPrestamo = p.idPrestamo,
-                        nombreCliente = listOfNotNull(p.nombre, p.apellidoPaterno).joinToString(" ").trim().ifBlank { "CLIENTE" },
-                        curp = p.curp ?: "N/D",
-                        fechaCreacion = p.fechaCreacion,
-                        montoTotal = p.montoTotal,
-                        plazoMeses = p.plazoMeses,
-                        estado = p.estado
-                    )
-                }
-
-                _uiState.update {
-                    it.copy(prestamos = pendientes, isLoading = false, mensaje = null)
-                }
-
             } catch (e: Exception) {
-                Log.e(TAG, "Error: ${e.localizedMessage}")
-                _uiState.update {
-                    it.copy(isLoading = false, mensaje = "Error de red: ${e.localizedMessage}")
-                }
+                Log.e(TAG, "estadisticas: ${e.localizedMessage}")
             }
         }
     }
 
-    fun aprobarPrestamo(id: Int, idAprobador: Int) {
-        procesarPrestamo(id, true, idAprobador)
+    fun cargarCartera() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(carteraLoading = true, error = null) }
+            try {
+                val usuariosResp = apiService.obtenerUsuarios(rol = "Cliente")
+                if (!usuariosResp.isSuccessful) {
+                    _uiState.update { it.copy(carteraLoading = false, error = "Error al cargar clientes") }
+                    return@launch
+                }
+                val clientes = usuariosResp.body()?.usuarios.orEmpty()
+                val items = mutableListOf<CarteraAdminItem>()
+                for (cliente in clientes) {
+                    try {
+                        val pr = apiService.obtenerPrestamosCliente(cliente.idUsuario)
+                        if (pr.isSuccessful) {
+                            pr.body().orEmpty()
+                                .filter {
+                                    it.estado.equals("ACTIVO", ignoreCase = true) ||
+                                            it.estado.equals("MORA", ignoreCase = true)
+                                }
+                                .forEach { p ->
+                                    items.add(CarteraAdminItem(
+                                        idPrestamo    = p.idPrestamo,
+                                        folio         = p.folio ?: "MSP-${p.idPrestamo}",
+                                        nombreCliente = "${cliente.nombre} ${cliente.apellidoPaterno}".trim(),
+                                        curp          = cliente.curp ?: "",
+                                        fechaAprobacion = (p.fechaAprobacion ?: p.fechaCreacion).take(10),
+                                        montoTotal    = p.montoTotal,
+                                        saldoPendiente= p.saldoPendiente,
+                                        tasaInteres   = p.tasaInteres,
+                                        plazoMeses    = p.plazoMeses,
+                                        pagosRealizados = p.pagosRealizados,
+                                        totalPagos    = p.totalPagos,
+                                        estado        = p.estado,
+                                        telefono      = cliente.telefono,
+                                        email         = cliente.email
+                                    ))
+                                }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "prestamos cliente ${cliente.idUsuario}: ${e.localizedMessage}")
+                    }
+                }
+                _uiState.update { it.copy(cartera = items, carteraLoading = false) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(carteraLoading = false, error = e.localizedMessage) }
+            }
+        }
     }
 
-    fun rechazarPrestamo(id: Int, idAprobador: Int) {
-        procesarPrestamo(id, false, idAprobador)
+    fun abrirEstadoCuenta(folio: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(estadoCuentaLoading = true, estadoCuenta = null) }
+            try {
+                val r = apiService.buscarTicket(folio)
+                if (r.isSuccessful) {
+                    _uiState.update { it.copy(estadoCuenta = r.body()?.ticket, estadoCuentaLoading = false) }
+                } else {
+                    _uiState.update { it.copy(estadoCuentaLoading = false, error = "Error ${r.code()}") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(estadoCuentaLoading = false, error = e.localizedMessage) }
+            }
+        }
     }
+
+    fun cerrarEstadoCuenta() = _uiState.update { it.copy(estadoCuenta = null) }
+
+    fun cargarFolios(fecha: String? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(foliosLoading = true, error = null) }
+            Log.d(TAG, "⏳ cargarFolios() — fecha=$fecha")
+            try {
+                val r = apiService.obtenerFoliosAdmin(fecha = fecha)
+                Log.d(TAG, "📡 cargarFolios HTTP ${r.code()} — isSuccessful=${r.isSuccessful}")
+
+                if (r.isSuccessful) {
+                    val body = r.body()
+                    Log.d(TAG, "✅ body nulo=${body == null}")
+                    Log.d(TAG, "✅ movimientos count=${body?.movimientos?.size}")
+                    Log.d(TAG, "✅ total_cobrado=${body?.totalCobrado}")
+                    body?.movimientos?.forEachIndexed { i, t ->
+                        Log.d(TAG, "   [$i] folio=${t.folio} fecha=${t.fechaGeneracion} monto=${t.montoPagado}")
+                    }
+                    _uiState.update { state ->
+                        state.copy(
+                            folios        = body?.movimientos.orEmpty(),
+                            foliosLoading = false,
+                            recaudacionTotal = if ((body?.totalCobrado ?: 0.0) > 0.0)
+                                body!!.totalCobrado
+                            else
+                                state.recaudacionTotal
+                        )
+                    }
+                } else {
+                    val errorBody = r.errorBody()?.string()
+                    Log.e(TAG, "❌ cargarFolios error ${r.code()} — body=$errorBody")
+                    _uiState.update { it.copy(foliosLoading = false, error = "Error ${r.code()}: $errorBody") }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "💥 cargarFolios exception: ${e.javaClass.simpleName} — ${e.localizedMessage}")
+                _uiState.update { it.copy(foliosLoading = false, error = e.localizedMessage) }
+            }
+        }
+    }
+
+    fun cargarSolicitudes() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(solicitudesLoading = true, error = null) }
+            try {
+                val r = apiService.obtenerPrestamosPendientesAdmin()
+                if (r.isSuccessful) {
+                    val lista = r.body().orEmpty()
+                    _uiState.update {
+                        it.copy(solicitudes = lista, solicitudesPendientes = lista.size, solicitudesLoading = false)
+                    }
+                } else {
+                    _uiState.update { it.copy(solicitudesLoading = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(solicitudesLoading = false, error = e.localizedMessage) }
+            }
+        }
+    }
+
+    fun abrirDetalleSolicitud(p: PrestamoPendienteAdmin) = _uiState.update { it.copy(solicitudDetalle = p) }
+    fun cerrarDetalleSolicitud() = _uiState.update { it.copy(solicitudDetalle = null) }
+
+    fun aprobarPrestamo(idPrestamo: Int, idAprobador: Int)  = procesarPrestamo(idPrestamo, true, idAprobador)
+    fun rechazarPrestamo(idPrestamo: Int, idAprobador: Int) = procesarPrestamo(idPrestamo, false, idAprobador)
 
     private fun procesarPrestamo(id: Int, esAprobado: Boolean, idAprobador: Int) {
         viewModelScope.launch {
             try {
-                val response = apiService.procesarPrestamo(
+                val r = apiService.procesarPrestamo(
                     AprobarPrestamoRequest(idPrestamo = id, accion = if (esAprobado) "aprobar" else "rechazar", idEmpleado = idAprobador)
                 )
-                if (response.isSuccessful) {
-                    val msg = if (esAprobado) "Prestamo aprobado" else "Prestamo rechazado"
-                    _uiState.update { it.copy(mensaje = msg) }
-                    cargarPrestamos()
+                if (r.isSuccessful) {
+                    _uiState.update { it.copy(mensaje = if (esAprobado) "✅ Préstamo aprobado" else "Préstamo rechazado", solicitudDetalle = null) }
+                    cargarSolicitudes()
+                    cargarEstadisticas()
                 } else {
-                    _uiState.update { it.copy(mensaje = "Error: ${response.code()}") }
+                    _uiState.update { it.copy(mensaje = "Error: ${r.code()}") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(mensaje = "Error: ${e.localizedMessage}") }
             }
         }
     }
+
+    fun limpiarMensaje() = _uiState.update { it.copy(mensaje = null) }
 }
