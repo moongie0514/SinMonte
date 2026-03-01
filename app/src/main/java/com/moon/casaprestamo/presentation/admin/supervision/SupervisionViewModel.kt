@@ -65,6 +65,7 @@ class SupervisionViewModel @Inject constructor(
     private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
+
     private val _uiState = MutableStateFlow(SupervisionUiState())
     val uiState: StateFlow<SupervisionUiState> = _uiState.asStateFlow()
 
@@ -77,6 +78,7 @@ class SupervisionViewModel @Inject constructor(
 
     fun setTab(tab: SupervisionTab) {
         _uiState.update { it.copy(tab = tab, mensaje = null, error = null) }
+        // FIX: refrescar recaudacion si está en 0 (ocurre al volver de otro módulo)
         // Mantener KPI de cartera independiente del KPI de folios para evitar parpadeos entre pestañas
         if (_uiState.value.recaudacionCartera == 0.0) cargarEstadisticas()
         when (tab) {
@@ -88,7 +90,6 @@ class SupervisionViewModel @Inject constructor(
 
     fun setFechas(desde: String, hasta: String) {
         _uiState.update { it.copy(fechaDesde = desde, fechaHasta = hasta) }
-
         if (_uiState.value.tab != SupervisionTab.FOLIOS) return
 
         val desdeApi = displayDateToApi(desde)
@@ -307,6 +308,7 @@ class SupervisionViewModel @Inject constructor(
             }
         }
     }
+
     fun cargarSolicitudes() {
         viewModelScope.launch {
             _uiState.update { it.copy(solicitudesLoading = true, error = null) }
