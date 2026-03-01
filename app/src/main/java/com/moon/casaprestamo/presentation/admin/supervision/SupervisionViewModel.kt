@@ -63,7 +63,6 @@ class SupervisionViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
     private val _uiState = MutableStateFlow(SupervisionUiState())
     val uiState: StateFlow<SupervisionUiState> = _uiState.asStateFlow()
@@ -205,7 +204,10 @@ class SupervisionViewModel @Inject constructor(
                         state.copy(
                             folios        = bodyFinal?.movimientos.orEmpty(),
                             foliosLoading = false,
-                            recaudacionFolios = bodyFinal?.totalCobrado ?: 0.0
+                            recaudacionTotal = if ((bodyFinal?.totalCobrado ?: 0.0) > 0.0)
+                                bodyFinal!!.totalCobrado
+                            else
+                                state.recaudacionTotal
                         )
                     }
                 } else {
@@ -249,64 +251,6 @@ class SupervisionViewModel @Inject constructor(
         )
     }
 
-
-    private fun displayDateToApi(displayDate: String): String? {
-        if (displayDate.isBlank()) return null
-        return try {
-            apiDateFormat.format(displayDateFormat.parse(displayDate)!!)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun cargarFoliosPorRango(desdeApi: String, hastaApi: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(foliosLoading = true, error = null) }
-            try {
-                val desde = apiDateFormat.parse(desdeApi) ?: run {
-                    _uiState.update { it.copy(foliosLoading = false) }
-                    return@launch
-                }
-                val hasta = apiDateFormat.parse(hastaApi) ?: run {
-                    _uiState.update { it.copy(foliosLoading = false) }
-                    return@launch
-                }
-
-                if (desde.after(hasta)) {
-                    _uiState.update { it.copy(foliosLoading = false, error = "Rango de fechas inválido") }
-                    return@launch
-                }
-
-                val calendario = Calendar.getInstance().apply { time = desde }
-                val limite = Calendar.getInstance().apply { time = hasta }
-                val acumulados = linkedMapOf<Int, TicketDetalle>()
-                var totalCobrado = 0.0
-
-                while (!calendario.after(limite)) {
-                    val fechaApi = apiDateFormat.format(calendario.time)
-                    val resp = apiService.obtenerFoliosAdmin(fecha = fechaApi)
-                    if (resp.isSuccessful) {
-                        val body = resp.body()
-                        body?.movimientos?.forEach { t -> acumulados.putIfAbsent(t.idTicket, t) }
-                        totalCobrado += body?.totalCobrado ?: 0.0
-                    } else {
-                        Log.w(TAG, "⚠️ rango $fechaApi HTTP ${resp.code()}")
-                    }
-                    calendario.add(Calendar.DAY_OF_YEAR, 1)
-                }
-
-                _uiState.update {
-                    it.copy(
-                        folios = acumulados.values.toList(),
-                        foliosLoading = false,
-                        recaudacionFolios = totalCobrado
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(foliosLoading = false, error = e.localizedMessage) }
-            }
-        }
-    }
     fun cargarSolicitudes() {
         viewModelScope.launch {
             _uiState.update { it.copy(solicitudesLoading = true, error = null) }
