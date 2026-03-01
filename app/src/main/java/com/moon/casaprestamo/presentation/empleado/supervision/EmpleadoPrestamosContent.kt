@@ -1,4 +1,4 @@
-package com.moon.casaprestamo.presentation.empleado
+package com.moon.casaprestamo.presentation.empleado.supervision
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
