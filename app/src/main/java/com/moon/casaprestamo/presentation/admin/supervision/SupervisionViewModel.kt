@@ -39,7 +39,8 @@ data class CarteraAdminItem(
 
 data class SupervisionUiState(
     val tab: SupervisionTab = SupervisionTab.CARTERA,
-    val recaudacionTotal: Double = 0.0,
+    val recaudacionCartera: Double = 0.0,
+    val recaudacionFolios: Double = 0.0,
     val solicitudesPendientes: Int = 0,
     val cartera: List<CarteraAdminItem> = emptyList(),
     val carteraLoading: Boolean = false,
@@ -75,8 +76,8 @@ class SupervisionViewModel @Inject constructor(
 
     fun setTab(tab: SupervisionTab) {
         _uiState.update { it.copy(tab = tab, mensaje = null, error = null) }
-        // FIX: refrescar recaudacion si está en 0 (ocurre al volver de otro módulo)
-        if (_uiState.value.recaudacionTotal == 0.0) cargarEstadisticas()
+        // Mantener KPI de cartera independiente del KPI de folios para evitar parpadeos entre pestañas
+        if (_uiState.value.recaudacionCartera == 0.0) cargarEstadisticas()
         when (tab) {
             SupervisionTab.CARTERA -> if (_uiState.value.cartera.isEmpty()) cargarCartera()
             SupervisionTab.FOLIOS  -> cargarFolios() // siempre recargar al entrar
@@ -86,6 +87,16 @@ class SupervisionViewModel @Inject constructor(
 
     fun setFechas(desde: String, hasta: String) {
         _uiState.update { it.copy(fechaDesde = desde, fechaHasta = hasta) }
+
+        if (_uiState.value.tab != SupervisionTab.FOLIOS) return
+
+        val desdeApi = displayDateToApi(desde)
+        val hastaApi = displayDateToApi(hasta)
+        when {
+            desde.isBlank() && hasta.isBlank() -> cargarFolios(null)
+            desdeApi != null && hastaApi != null -> cargarFoliosPorRango(desdeApi, hastaApi)
+            else -> cargarFolios(null)
+        }
     }
 
     fun cargarEstadisticas() {
@@ -93,7 +104,7 @@ class SupervisionViewModel @Inject constructor(
             try {
                 val r = apiService.obtenerEstadisticas()
                 if (r.isSuccessful) {
-                    _uiState.update { it.copy(recaudacionTotal = r.body()!!.montoRecuperado) }
+                    _uiState.update { it.copy(recaudacionCartera = r.body()!!.montoRecuperado) }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "estadisticas: ${e.localizedMessage}")
