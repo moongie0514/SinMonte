@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
@@ -59,6 +60,8 @@ data class SupervisionUiState(
 class SupervisionViewModel @Inject constructor(
     private val apiService: ApiService
 ) : ViewModel() {
+
+    private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     private val _uiState = MutableStateFlow(SupervisionUiState())
     val uiState: StateFlow<SupervisionUiState> = _uiState.asStateFlow()
@@ -176,18 +179,22 @@ class SupervisionViewModel @Inject constructor(
 
                 if (r.isSuccessful) {
                     val body = r.body()
+                    val bodyFinal = if (fecha == null && body?.movimientos.isNullOrEmpty()) {
+                        cargarFoliosHistoricos()
+                    } else body
+
                     Log.d(TAG, "✅ body nulo=${body == null}")
-                    Log.d(TAG, "✅ movimientos count=${body?.movimientos?.size}")
-                    Log.d(TAG, "✅ total_cobrado=${body?.totalCobrado}")
-                    body?.movimientos?.forEachIndexed { i, t ->
+                    Log.d(TAG, "✅ movimientos count=${bodyFinal?.movimientos?.size}")
+                    Log.d(TAG, "✅ total_cobrado=${bodyFinal?.totalCobrado}")
+                    bodyFinal?.movimientos?.forEachIndexed { i, t ->
                         Log.d(TAG, "   [$i] folio=${t.folio} fecha=${t.fechaGeneracion} monto=${t.montoPagado}")
                     }
                     _uiState.update { state ->
                         state.copy(
-                            folios        = body?.movimientos.orEmpty(),
+                            folios        = bodyFinal?.movimientos.orEmpty(),
                             foliosLoading = false,
-                            recaudacionTotal = if ((body?.totalCobrado ?: 0.0) > 0.0)
-                                body!!.totalCobrado
+                            recaudacionTotal = if ((bodyFinal?.totalCobrado ?: 0.0) > 0.0)
+                                bodyFinal!!.totalCobrado
                             else
                                 state.recaudacionTotal
                         )
@@ -202,6 +209,35 @@ class SupervisionViewModel @Inject constructor(
                 _uiState.update { it.copy(foliosLoading = false, error = e.localizedMessage) }
             }
         }
+    }
+
+    private suspend fun cargarFoliosHistoricos(diasMaximos: Int = 30): CorteCajaResponse? {
+        Log.d(TAG, "ℹ️ Sin folios del día, iniciando búsqueda histórica (${diasMaximos} días)")
+        val acumulados = linkedMapOf<Int, TicketDetalle>()
+        var totalCobrado = 0.0
+
+        repeat(diasMaximos) { indice ->
+            val fecha = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -indice) }.time
+            val fechaApi = apiDateFormat.format(fecha)
+            val resp: Response<CorteCajaResponse> = apiService.obtenerFoliosAdmin(fecha = fechaApi)
+            if (!resp.isSuccessful) {
+                Log.w(TAG, "⚠️ histórico $fechaApi HTTP ${resp.code()}")
+                return@repeat
+            }
+
+            val body = resp.body() ?: return@repeat
+            body.movimientos.forEach { ticket -> acumulados.putIfAbsent(ticket.idTicket, ticket) }
+            totalCobrado += body.totalCobrado
+        }
+
+        Log.d(TAG, "✅ búsqueda histórica completada: ${acumulados.size} folios")
+        return CorteCajaResponse(
+            status = "success",
+            fecha = "historico",
+            totalPagos = acumulados.size,
+            totalCobrado = totalCobrado,
+            movimientos = acumulados.values.toList()
+        )
     }
 
     fun cargarSolicitudes() {
