@@ -1,8 +1,5 @@
-package com.moon.casaprestamo.presentation.admin.supervision.components
+package com.moon.casaprestamo.ui.components.common
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,13 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.moon.casaprestamo.data.models.PrestamoPendienteAdmin
-import com.moon.casaprestamo.data.models.TicketDetalle
 import com.moon.casaprestamo.presentation.admin.supervision.*
-import java.text.SimpleDateFormat
-import java.util.*
 
 @Composable
 internal fun TabSolicitudes(

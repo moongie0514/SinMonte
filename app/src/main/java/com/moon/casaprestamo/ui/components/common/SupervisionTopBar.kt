@@ -1,4 +1,4 @@
-package com.moon.casaprestamo.presentation.admin.supervision.components
+package com.moon.casaprestamo.ui.components.common
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -10,19 +10,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.moon.casaprestamo.data.models.PrestamoPendienteAdmin
-import com.moon.casaprestamo.data.models.TicketDetalle
 import com.moon.casaprestamo.presentation.admin.supervision.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -30,7 +26,6 @@ import java.util.*
 @Composable
 internal fun BarraSuperior(
     recaudacion: Double,
-    recaudacionLabel: String,
     recaudacionCargando: Boolean,
     solicitudesPendientes: Int,
     tabActual: SupervisionTab,
@@ -55,7 +50,7 @@ internal fun BarraSuperior(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             KpiCard(
-                titulo     = "RECAUDACIÓN ($recaudacionLabel)",
+                titulo     = "RECAUDACIÓN",
                 valor      = if (recaudacionCargando) "CARGANDO..." else "\$${String.format("%,.0f", recaudacion)}",
                 icono      = Icons.Default.AttachMoney,
                 color      = Verde,
@@ -122,7 +117,7 @@ internal fun BarraSuperior(
 private fun KpiCard(
     titulo: String,
     valor: String,
-    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    icono: ImageVector,
     color: Color,
     isSelected: Boolean,
     onClick: () -> Unit,
@@ -319,8 +314,3 @@ private fun ResumenFechaChip(
         }
     }
 }
-
-// ═════════════════════════════════════════════════════════════
-// TAB CARTERA ACTIVA
-// ═════════════════════════════════════════════════════════════
-

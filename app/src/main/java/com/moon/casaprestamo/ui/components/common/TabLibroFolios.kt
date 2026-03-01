@@ -1,12 +1,10 @@
-package com.moon.casaprestamo.presentation.admin.supervision.components
+package com.moon.casaprestamo.ui.components.common
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,12 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.moon.casaprestamo.data.models.PrestamoPendienteAdmin
 import com.moon.casaprestamo.data.models.TicketDetalle
 import com.moon.casaprestamo.presentation.admin.supervision.*
 import java.text.SimpleDateFormat
@@ -38,12 +32,11 @@ internal fun TabFolios(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
 
-    // FIX 4: cargar todos los folios al entrar, sin requerir fecha
+    // FIX cargar todos los folios al entrar, sin requerir fecha
     LaunchedEffect(Unit) { onCargarFolios(null) }
 
     // FIX 5: filtro por rango de fechas en folios
-    val filtrados by remember(uiState.folios, uiState.fechaDesde, uiState.fechaHasta, query) {
-        derivedStateOf { uiState.folios.filter { ticket ->
+    val filtrados = uiState.folios.filter { ticket ->
         val pasaQuery = query.isBlank() || listOf(ticket.folio, ticket.folioPrestamo, ticket.nombre, ticket.apellidoPaterno)
             .joinToString(" ").contains(query, ignoreCase = true)
 
@@ -63,7 +56,7 @@ internal fun TabFolios(
             }
         }
         pasaQuery && pasaFechas
-    } }
+    }
 
     Card(
         shape = RoundedCornerShape(24.dp),
@@ -126,7 +119,9 @@ internal fun TabFolios(
                             HorizontalDivider()
                         }
                         items(filtrados, key = { it.idTicket }) { ticket ->
-                            FolioRow(ticket = ticket, onClickFolio = { onClickFolio(ticket.folioPrestamo) })
+                            FolioRow(
+                                ticket = ticket,
+                                onClickFolio = { onClickFolio(ticket.folioPrestamo) })
                             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(0.4f))
                         }
                     }
@@ -135,7 +130,6 @@ internal fun TabFolios(
         }
     }
 }
-
 @Composable
 private fun FolioRow(ticket: TicketDetalle, onClickFolio: () -> Unit) {
     val nombreCompleto = listOf(ticket.nombre, ticket.apellidoPaterno).joinToString(" ").trim()

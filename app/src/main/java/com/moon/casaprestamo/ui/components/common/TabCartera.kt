@@ -1,12 +1,10 @@
-package com.moon.casaprestamo.presentation.admin.supervision.components
+package com.moon.casaprestamo.ui.components.common
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,19 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.moon.casaprestamo.data.models.PrestamoPendienteAdmin
-import com.moon.casaprestamo.data.models.TicketDetalle
 import com.moon.casaprestamo.presentation.admin.supervision.*
-import java.text.SimpleDateFormat
-import java.util.*
+
 
 @Composable
-internal fun TabCartera(
+fun TabCartera(
     uiState: SupervisionUiState,
     onSwitch: () -> Unit,
     onDetalle: (String) -> Unit
@@ -38,8 +30,7 @@ internal fun TabCartera(
     var query by rememberSaveable { mutableStateOf("") }
 
     // FIX 5: filtro por rango de fechas además del query de texto
-    val filtrados by remember(uiState.cartera, uiState.fechaDesde, uiState.fechaHasta, query) {
-        derivedStateOf { uiState.cartera.filter { item ->
+    val filtrados = uiState.cartera.filter { item ->
         val pasaQuery = query.isBlank() || listOf(item.nombreCliente, item.curp, item.folio)
             .joinToString(" ").contains(query, ignoreCase = true)
 
@@ -57,7 +48,7 @@ internal fun TabCartera(
             }
         }
         pasaQuery && pasaFechas
-    } }
+    }
 
     Card(
         shape = RoundedCornerShape(24.dp),
@@ -122,7 +113,9 @@ internal fun TabCartera(
                             HorizontalDivider()
                         }
                         items(filtrados, key = { it.idPrestamo }) { item ->
-                            CarteraRow(item = item, onDetalle = { onDetalle(item.folio) })
+                            CarteraRow(
+                                item = item,
+                                onDetalle = { onDetalle(item.folio) })
                             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(0.4f))
                         }
                     }
