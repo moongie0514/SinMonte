@@ -50,6 +50,7 @@ internal fun milisAFecha(milis: Long?): String {
 fun AdminSupervisionContent(
     uiState: SupervisionUiState,
     idAprobador: Int,
+    esAdmin: Boolean = true,
     onSetTab: (SupervisionTab) -> Unit,
     onSetFechas: (String, String) -> Unit,
     onCargarFolios: (String?) -> Unit,
@@ -62,6 +63,11 @@ fun AdminSupervisionContent(
     onLimpiarMensaje: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val tabEfectiva = if (!esAdmin && uiState.tab == SupervisionTab.SOLICITUDES) SupervisionTab.CARTERA else uiState.tab
+
+    LaunchedEffect(esAdmin, uiState.tab) {
+        if (!esAdmin && uiState.tab == SupervisionTab.SOLICITUDES) onSetTab(SupervisionTab.CARTERA)
+    }
 
     Column(
         modifier = modifier.fillMaxSize().padding(vertical = 8.dp),
@@ -71,32 +77,45 @@ fun AdminSupervisionContent(
             recaudacion           = if (uiState.tab == SupervisionTab.FOLIOS) uiState.recaudacionFolios else uiState.recaudacionCartera,
             recaudacionCargando   = uiState.tab == SupervisionTab.FOLIOS && uiState.foliosLoading,
             solicitudesPendientes = uiState.solicitudesPendientes,
-            tabActual             = uiState.tab,
-            fechaDesde            = uiState.fechaDesde,
-            fechaHasta            = uiState.fechaHasta,
-            onLoad                = onSetFechas,
-            onClickRecaudacion    = { onSetTab(SupervisionTab.CARTERA) },
-            onClickSolicitudes    = { onSetTab(SupervisionTab.SOLICITUDES) },
-            onFechasChange        = onSetFechas,
+            tabActual = tabEfectiva,
+            fechaDesde = uiState.fechaDesde,
+            fechaHasta = uiState.fechaHasta,
+            esAdmin = esAdmin,
+            onLoad = onSetFechas,
+            onClickRecaudacion = { if (esAdmin) onSetTab(SupervisionTab.CARTERA) },
+            onClickSolicitudes = { if (esAdmin) onSetTab(SupervisionTab.SOLICITUDES) },
+            onFechasChange = onSetFechas,
         )
 
-        when (uiState.tab) {
+        when (tabEfectiva) {
             SupervisionTab.CARTERA -> TabCartera(
-                uiState   = uiState,
-                onSwitch  = { onSetTab(SupervisionTab.FOLIOS) },
+                cartera = uiState.cartera,
+                isLoading = uiState.carteraLoading,
+                fechaDesde = uiState.fechaDesde,
+                fechaHasta = uiState.fechaHasta,
+                onSwitch = { onSetTab(SupervisionTab.FOLIOS) },
                 onDetalle = onAbrirEstadoCuenta
             )
-            SupervisionTab.FOLIOS -> TabFolios(
-                uiState        = uiState,
-                onSwitch       = { onSetTab(SupervisionTab.CARTERA) },
+
+            SupervisionTab.FOLIOS -> TabLibroFolios(
+                movimientos = uiState.folios,
+                isLoading = uiState.foliosLoading,
+                fechaDesde = uiState.fechaDesde,
+                fechaHasta = uiState.fechaHasta,
+                onSwitch = { onSetTab(SupervisionTab.CARTERA) },
                 onCargarFolios = onCargarFolios,
-                onClickFolio   = onAbrirEstadoCuenta
+                onClickFolio = onAbrirEstadoCuenta
             )
-            SupervisionTab.SOLICITUDES -> TabSolicitudes(
-                uiState        = uiState,
-                onVolver       = { onSetTab(SupervisionTab.CARTERA) },
-                onAbrirDetalle = onAbrirSolicitud
-            )
+
+            SupervisionTab.SOLICITUDES -> if (esAdmin) {
+                TabSolicitudes(
+                    solicitudes = uiState.solicitudes,
+                    isLoading = uiState.solicitudesLoading,
+                    permiteAprobar = true,
+                    onVolver = { onSetTab(SupervisionTab.CARTERA) },
+                    onAbrirDetalle = onAbrirSolicitud
+                )
+            }
         }
 
         uiState.mensaje?.let { msg ->
@@ -105,20 +124,19 @@ fun AdminSupervisionContent(
                 onLimpiarMensaje()
             }
             Surface(
-                color    = if (msg.contains("✅")) Verde.copy(0.12f) else Rojo.copy(0.12f),
-                shape    = RoundedCornerShape(12.dp),
+                color = if (msg.contains("✅")) Verde.copy(0.12f) else Rojo.copy(0.12f),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    msg, modifier = Modifier.padding(12.dp),
-                    color = if (msg.contains("✅")) Verde else Rojo,
-                    fontWeight = FontWeight.Bold
+                    msg,
+                    modifier = Modifier.padding(12.dp),
+                    color = if (msg.contains("✅")) Verde else Rojo
                 )
             }
         }
     }
 
-    // Modales
     if (uiState.estadoCuentaLoading) {
         Dialog(onDismissRequest = onCerrarEstadoCuenta) {
             Box(Modifier.size(80.dp), contentAlignment = Alignment.Center) {
