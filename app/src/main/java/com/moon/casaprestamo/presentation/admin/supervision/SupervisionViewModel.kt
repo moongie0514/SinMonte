@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
@@ -38,7 +39,8 @@ data class CarteraAdminItem(
 
 data class SupervisionUiState(
     val tab: SupervisionTab = SupervisionTab.CARTERA,
-    val recaudacionTotal: Double = 0.0,
+    val recaudacionCartera: Double = 0.0,
+    val recaudacionFolios: Double = 0.0,
     val solicitudesPendientes: Int = 0,
     val cartera: List<CarteraAdminItem> = emptyList(),
     val carteraLoading: Boolean = false,
@@ -60,6 +62,9 @@ class SupervisionViewModel @Inject constructor(
     private val apiService: ApiService
 ) : ViewModel() {
 
+    private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
     private val _uiState = MutableStateFlow(SupervisionUiState())
     val uiState: StateFlow<SupervisionUiState> = _uiState.asStateFlow()
 
@@ -72,8 +77,8 @@ class SupervisionViewModel @Inject constructor(
 
     fun setTab(tab: SupervisionTab) {
         _uiState.update { it.copy(tab = tab, mensaje = null, error = null) }
-        // FIX: refrescar recaudacion si está en 0 (ocurre al volver de otro módulo)
-        if (_uiState.value.recaudacionTotal == 0.0) cargarEstadisticas()
+        // Mantener KPI de cartera independiente del KPI de folios para evitar parpadeos entre pestañas
+        if (_uiState.value.recaudacionCartera == 0.0) cargarEstadisticas()
         when (tab) {
             SupervisionTab.CARTERA -> if (_uiState.value.cartera.isEmpty()) cargarCartera()
             SupervisionTab.FOLIOS  -> cargarFolios() // siempre recargar al entrar
@@ -83,6 +88,16 @@ class SupervisionViewModel @Inject constructor(
 
     fun setFechas(desde: String, hasta: String) {
         _uiState.update { it.copy(fechaDesde = desde, fechaHasta = hasta) }
+
+        if (_uiState.value.tab != SupervisionTab.FOLIOS) return
+
+        val desdeApi = displayDateToApi(desde)
+        val hastaApi = displayDateToApi(hasta)
+        when {
+            desde.isBlank() && hasta.isBlank() -> cargarFolios(null)
+            desdeApi != null && hastaApi != null -> cargarFoliosPorRango(desdeApi, hastaApi)
+            else -> cargarFolios(null)
+        }
     }
 
     fun cargarEstadisticas() {
@@ -90,7 +105,7 @@ class SupervisionViewModel @Inject constructor(
             try {
                 val r = apiService.obtenerEstadisticas()
                 if (r.isSuccessful) {
-                    _uiState.update { it.copy(recaudacionTotal = r.body()!!.montoRecuperado) }
+                    _uiState.update { it.copy(recaudacionCartera = r.body()!!.montoRecuperado) }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "estadisticas: ${e.localizedMessage}")
@@ -176,20 +191,21 @@ class SupervisionViewModel @Inject constructor(
 
                 if (r.isSuccessful) {
                     val body = r.body()
+                    val bodyFinal = if (fecha == null && body?.movimientos.isNullOrEmpty()) {
+                        cargarFoliosHistoricos()
+                    } else body
+
                     Log.d(TAG, "✅ body nulo=${body == null}")
-                    Log.d(TAG, "✅ movimientos count=${body?.movimientos?.size}")
-                    Log.d(TAG, "✅ total_cobrado=${body?.totalCobrado}")
-                    body?.movimientos?.forEachIndexed { i, t ->
+                    Log.d(TAG, "✅ movimientos count=${bodyFinal?.movimientos?.size}")
+                    Log.d(TAG, "✅ total_cobrado=${bodyFinal?.totalCobrado}")
+                    bodyFinal?.movimientos?.forEachIndexed { i, t ->
                         Log.d(TAG, "   [$i] folio=${t.folio} fecha=${t.fechaGeneracion} monto=${t.montoPagado}")
                     }
                     _uiState.update { state ->
                         state.copy(
-                            folios        = body?.movimientos.orEmpty(),
+                            folios        = bodyFinal?.movimientos.orEmpty(),
                             foliosLoading = false,
-                            recaudacionTotal = if ((body?.totalCobrado ?: 0.0) > 0.0)
-                                body!!.totalCobrado
-                            else
-                                state.recaudacionTotal
+                            recaudacionFolios = bodyFinal?.totalCobrado ?: 0.0
                         )
                     }
                 } else {
@@ -204,6 +220,93 @@ class SupervisionViewModel @Inject constructor(
         }
     }
 
+    private suspend fun cargarFoliosHistoricos(diasMaximos: Int = 30): CorteCajaResponse? {
+        Log.d(TAG, "ℹ️ Sin folios del día, iniciando búsqueda histórica (${diasMaximos} días)")
+        val acumulados = linkedMapOf<Int, TicketDetalle>()
+        var totalCobrado = 0.0
+
+        repeat(diasMaximos) { indice ->
+            val fecha = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -indice) }.time
+            val fechaApi = apiDateFormat.format(fecha)
+            val resp: Response<CorteCajaResponse> = apiService.obtenerFoliosAdmin(fecha = fechaApi)
+            if (!resp.isSuccessful) {
+                Log.w(TAG, "⚠️ histórico $fechaApi HTTP ${resp.code()}")
+                return@repeat
+            }
+
+            val body = resp.body() ?: return@repeat
+            body.movimientos.forEach { ticket -> acumulados.putIfAbsent(ticket.idTicket, ticket) }
+            totalCobrado += body.totalCobrado
+        }
+
+        Log.d(TAG, "✅ búsqueda histórica completada: ${acumulados.size} folios")
+        return CorteCajaResponse(
+            status = "success",
+            fecha = "historico",
+            totalPagos = acumulados.size,
+            totalCobrado = totalCobrado,
+            movimientos = acumulados.values.toList()
+        )
+    }
+
+
+    private fun displayDateToApi(displayDate: String): String? {
+        if (displayDate.isBlank()) return null
+        return try {
+            apiDateFormat.format(displayDateFormat.parse(displayDate)!!)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun cargarFoliosPorRango(desdeApi: String, hastaApi: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(foliosLoading = true, error = null) }
+            try {
+                val desde = apiDateFormat.parse(desdeApi) ?: run {
+                    _uiState.update { it.copy(foliosLoading = false) }
+                    return@launch
+                }
+                val hasta = apiDateFormat.parse(hastaApi) ?: run {
+                    _uiState.update { it.copy(foliosLoading = false) }
+                    return@launch
+                }
+
+                if (desde.after(hasta)) {
+                    _uiState.update { it.copy(foliosLoading = false, error = "Rango de fechas inválido") }
+                    return@launch
+                }
+
+                val calendario = Calendar.getInstance().apply { time = desde }
+                val limite = Calendar.getInstance().apply { time = hasta }
+                val acumulados = linkedMapOf<Int, TicketDetalle>()
+                var totalCobrado = 0.0
+
+                while (!calendario.after(limite)) {
+                    val fechaApi = apiDateFormat.format(calendario.time)
+                    val resp = apiService.obtenerFoliosAdmin(fecha = fechaApi)
+                    if (resp.isSuccessful) {
+                        val body = resp.body()
+                        body?.movimientos?.forEach { t -> acumulados.putIfAbsent(t.idTicket, t) }
+                        totalCobrado += body?.totalCobrado ?: 0.0
+                    } else {
+                        Log.w(TAG, "⚠️ rango $fechaApi HTTP ${resp.code()}")
+                    }
+                    calendario.add(Calendar.DAY_OF_YEAR, 1)
+                }
+
+                _uiState.update {
+                    it.copy(
+                        folios = acumulados.values.toList(),
+                        foliosLoading = false,
+                        recaudacionFolios = totalCobrado
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(foliosLoading = false, error = e.localizedMessage) }
+            }
+        }
+    }
     fun cargarSolicitudes() {
         viewModelScope.launch {
             _uiState.update { it.copy(solicitudesLoading = true, error = null) }

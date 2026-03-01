@@ -84,7 +84,9 @@ fun AdminSupervisionContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         BarraSuperior(
-            recaudacion           = uiState.recaudacionTotal,
+            recaudacion           = if (uiState.tab == SupervisionTab.FOLIOS) uiState.recaudacionFolios else uiState.recaudacionCartera,
+            recaudacionLabel      = if (uiState.tab == SupervisionTab.FOLIOS) "FOLIOS" else "CARTERA",
+            recaudacionCargando   = uiState.tab == SupervisionTab.FOLIOS && uiState.foliosLoading,
             solicitudesPendientes = uiState.solicitudesPendientes,
             tabActual             = uiState.tab,
             fechaDesde            = uiState.fechaDesde,
@@ -161,6 +163,8 @@ fun AdminSupervisionContent(
 @Composable
 private fun BarraSuperior(
     recaudacion: Double,
+    recaudacionLabel: String,
+    recaudacionCargando: Boolean,
     solicitudesPendientes: Int,
     tabActual: SupervisionTab,
     fechaDesde: String,
@@ -184,8 +188,8 @@ private fun BarraSuperior(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             KpiCard(
-                titulo     = "RECAUDACIÓN",
-                valor      = "\$${String.format("%,.0f", recaudacion)}",
+                titulo     = "RECAUDACIÓN ($recaudacionLabel)",
+                valor      = if (recaudacionCargando) "CARGANDO..." else "\$${String.format("%,.0f", recaudacion)}",
                 icono      = Icons.Default.AttachMoney,
                 color      = Verde,
                 isSelected = tabActual != SupervisionTab.SOLICITUDES,
@@ -684,7 +688,7 @@ private fun TabFolios(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(2.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().heightIn(min = 380.dp)
     ) {
         Column(Modifier.fillMaxWidth()) {
             Row(
@@ -715,27 +719,35 @@ private fun TabFolios(
                     unfocusedBorderColor    = Color.Transparent, focusedBorderColor = Rojo
                 )
             )
+
             Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TH("NÚM. FOLIO", Modifier.weight(1.6f))
-                TH("FECHA",     Modifier.weight(0.9f))
-                TH("IMPORTE",   Modifier.weight(0.9f))
-                TH("MÉTODO",    Modifier.weight(0.9f))
-                TH("AUTORIZÓ",  Modifier.weight(1f))
-            }
-            HorizontalDivider()
-            when {
-                uiState.foliosLoading -> LoadBox()
-                filtrados.isEmpty()   -> EmptyBox("Sin folios registrados")
-                else -> LazyColumn(Modifier.heightIn(max = 600.dp)) {
-                    items(filtrados, key = { it.idTicket }) { ticket ->
-                        FolioRow(ticket = ticket, onClickFolio = { onClickFolio(ticket.folioPrestamo) })
-                        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(0.4f))
+
+            Box(modifier = Modifier.weight(1f)) {
+                when {
+                    uiState.foliosLoading -> LoadBox()
+                    filtrados.isEmpty()   -> EmptyBox("Sin folios registrados")
+                    else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        stickyHeader {
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TH("CLIENTE", Modifier.weight(1.4f))
+                                Spacer(Modifier.width(8.dp))
+                                TH("FECHA", Modifier.weight(0.8f))
+                                Spacer(Modifier.width(8.dp))
+                                TH("IMPORTE", Modifier.weight(0.9f))
+                                Spacer(Modifier.width(8.dp))
+                                TH("ESTADO", Modifier.weight(0.9f))
+                            }
+                            HorizontalDivider()
+                        }
+                        items(filtrados, key = { it.idTicket }) { ticket ->
+                            FolioRow(ticket = ticket, onClickFolio = { onClickFolio(ticket.folioPrestamo) })
+                            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(0.4f))
+                        }
                     }
                 }
             }
@@ -745,32 +757,72 @@ private fun TabFolios(
 
 @Composable
 private fun FolioRow(ticket: TicketDetalle, onClickFolio: () -> Unit) {
+    val nombreCompleto = listOf(ticket.nombre, ticket.apellidoPaterno).joinToString(" ").trim()
+    val nombreLinea1 = nombreCompleto.split(" ").take(2).joinToString(" ")
+    val nombreLinea2 = nombreCompleto.split(" ").drop(2).joinToString(" ")
+
+    val fechaRaw = ticket.fechaGeneracion.take(10)
+    val fechaFormateada = if (fechaRaw.contains("-")) {
+        val last = fechaRaw.lastIndexOf("-")
+        fechaRaw.substring(0, last) + "\n" + fechaRaw.substring(last)
+    } else fechaRaw
+
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClickFolio() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(Modifier.weight(1.6f)) {
+        Column(modifier = Modifier.weight(1.4f)) {
+            Text(nombreLinea1, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
+            if (nombreLinea2.isNotBlank()) {
+                Text(nombreLinea2, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
+            }
             Text(
-                ticket.folio, color = Rojo, fontWeight = FontWeight.Bold,
-                fontSize = 12.sp, fontFamily = FontFamily.Monospace,
-                modifier = Modifier.clickable(onClick = onClickFolio)
-            )
-            Text(
-                "${ticket.nombre} ${ticket.apellidoPaterno}",
-                fontSize = 10.sp, color = MaterialTheme.colorScheme.outline,
-                maxLines = 1, overflow = TextOverflow.Ellipsis
+                ticket.folio,
+                color = Rojo,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace
             )
         }
-        Text(ticket.fechaGeneracion.take(10), Modifier.weight(0.9f), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-        Text("\$${String.format("%,.0f", ticket.montoPagado)}", Modifier.weight(0.9f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Text(ticket.metodoPago, Modifier.weight(0.9f), fontSize = 11.sp)
-        Text("ADMINISTRADOR", Modifier.weight(1f), fontSize = 9.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline, letterSpacing = 0.5.sp)
+
+        Spacer(Modifier.width(8.dp))
+
+        Text(
+            fechaFormateada,
+            modifier = Modifier.weight(0.8f),
+            fontSize = 11.sp,
+            lineHeight = 12.sp,
+            color = MaterialTheme.colorScheme.outline
+        )
+
+        Spacer(Modifier.width(8.dp))
+
+        Text(
+            "\$${String.format("%,.0f", ticket.montoPagado)}",
+            modifier = Modifier.weight(0.9f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Black
+        )
+
+        Spacer(Modifier.width(8.dp))
+
+        Box(modifier = Modifier.weight(0.9f)) {
+            Surface(color = Rojo.copy(0.12f), shape = RoundedCornerShape(50)) {
+                Text(
+                    "PAGADO",
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Rojo,
+                    maxLines = 1
+                )
+            }
+        }
     }
 }
-
-// ═════════════════════════════════════════════════════════════
-// TAB SOLICITUDES
-// ═════════════════════════════════════════════════════════════
 
 @Composable
 private fun TabSolicitudes(
