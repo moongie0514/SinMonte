@@ -85,7 +85,6 @@ fun AdminSupervisionContent(
     ) {
         BarraSuperior(
             recaudacion           = if (uiState.tab == SupervisionTab.FOLIOS) uiState.recaudacionFolios else uiState.recaudacionCartera,
-            recaudacionLabel      = if (uiState.tab == SupervisionTab.FOLIOS) "FOLIOS" else "CARTERA",
             recaudacionCargando   = uiState.tab == SupervisionTab.FOLIOS && uiState.foliosLoading,
             solicitudesPendientes = uiState.solicitudesPendientes,
             tabActual             = uiState.tab,
@@ -163,7 +162,6 @@ fun AdminSupervisionContent(
 @Composable
 private fun BarraSuperior(
     recaudacion: Double,
-    recaudacionLabel: String,
     recaudacionCargando: Boolean,
     solicitudesPendientes: Int,
     tabActual: SupervisionTab,
@@ -188,7 +186,7 @@ private fun BarraSuperior(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             KpiCard(
-                titulo     = "RECAUDACIÓN ($recaudacionLabel)",
+                titulo     = "RECAUDACIÓN",
                 valor      = if (recaudacionCargando) "CARGANDO..." else "\$${String.format("%,.0f", recaudacion)}",
                 icono      = Icons.Default.AttachMoney,
                 color      = Verde,
