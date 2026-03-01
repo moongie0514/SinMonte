@@ -27,25 +27,29 @@ import androidx.compose.ui.window.DialogProperties
 import com.moon.casaprestamo.data.models.PrestamoPendienteAdmin
 import com.moon.casaprestamo.data.models.TicketDetalle
 import com.moon.casaprestamo.data.models.TicketPrestamoDetalle
+import com.moon.casaprestamo.presentation.admin.supervision.components.BarraSuperior
+import com.moon.casaprestamo.presentation.admin.supervision.components.TabCartera
+import com.moon.casaprestamo.presentation.admin.supervision.components.TabFolios
+import com.moon.casaprestamo.presentation.admin.supervision.components.TabSolicitudes
 import com.moon.casaprestamo.presentation.cliente.cartera.PagoRowPrototipo
 import com.moon.casaprestamo.presentation.cliente.cartera.SpecificCard
 import java.text.SimpleDateFormat
 import java.util.*
 
-private val Rojo     = Color(0xFFA6032F)
-private val Oscuro   = Color(0xFF0F172A)
-private val Verde    = Color(0xFF10B981)
-private val Amarillo = Color(0xFFF59E0B)
+internal val Rojo     = Color(0xFFA6032F)
+internal val Oscuro   = Color(0xFF0F172A)
+internal val Verde    = Color(0xFF10B981)
+internal val Amarillo = Color(0xFFF59E0B)
 
 // Convierte "yyyy-MM-dd" a millis (medianoche UTC) para comparar
-private fun fechaStringAMillis(fecha: String): Long? {
+internal fun fechaStringAMillis(fecha: String): Long? {
     return try {
         SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(fecha)?.time
     } catch (e: Exception) { null }
 }
 
 // Convierte "dd/MM/yyyy" (formato display) a "yyyy-MM-dd" (formato API)
-private fun displayAApiDate(display: String): String {
+internal fun displayAApiDate(display: String): String {
     return try {
         val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val api = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -53,7 +57,7 @@ private fun displayAApiDate(display: String): String {
     } catch (e: Exception) { display }
 }
 
-private fun milisAFecha(milis: Long?): String {
+internal fun milisAFecha(milis: Long?): String {
     if (milis == null) return ""
     return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(milis))
 }
@@ -1067,7 +1071,7 @@ fun EstadoDeCuentaModal(detalle: TicketPrestamoDetalle, onDismiss: () -> Unit) {
 // ═════════════════════════════════════════════════════════════
 
 @Composable
-private fun DetalleSolicitudModal(
+internal fun DetalleSolicitudModal(
     prestamo: PrestamoPendienteAdmin,
     onDismiss: () -> Unit,
     onAprobar: () -> Unit,
@@ -1141,24 +1145,24 @@ private fun DetalleSolicitudModal(
 // ─── Micro-helpers ───────────────────────────────────────────
 
 @Composable
-private fun TH(text: String, modifier: Modifier) =
+internal fun TH(text: String, modifier: Modifier) =
     Text(text, modifier = modifier, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.5.sp, color = MaterialTheme.colorScheme.outline)
 
 @Composable
-private fun CalH(text: String, modifier: Modifier) =
+internal fun CalH(text: String, modifier: Modifier) =
     Text(text, modifier = modifier, fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF94A3B8))
 
 @Composable
-private fun CondItem(label: String, value: String, modifier: Modifier) =
+internal fun CondItem(label: String, value: String, modifier: Modifier) =
     Column(modifier) {
         Text(label, fontSize = 9.sp, color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Bold)
         Text(value, fontSize = 14.sp, fontWeight = FontWeight.Black)
     }
 
 @Composable
-private fun LoadBox() =
+internal fun LoadBox() =
     Box(Modifier.fillMaxWidth().padding(40.dp), Alignment.Center) { CircularProgressIndicator(color = Rojo) }
 
 @Composable
-private fun EmptyBox(msg: String) =
+internal fun EmptyBox(msg: String) =
     Box(Modifier.fillMaxWidth().padding(40.dp), Alignment.Center) { Text(msg, color = MaterialTheme.colorScheme.outline) }
