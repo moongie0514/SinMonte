@@ -7,6 +7,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun AdminSupervisionScreen(
     idAprobador: Int,
+    esAdmin: Boolean = true,
     viewModel: SupervisionViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -15,6 +16,7 @@ fun AdminSupervisionScreen(
     AdminSupervisionContent(
         uiState              = uiState,
         idAprobador          = idAprobador,
+        esAdmin             = esAdmin,
         onSetTab             = viewModel::setTab,
         onSetFechas          = viewModel::setFechas,
         onCargarFolios       = viewModel::cargarFolios,
