@@ -1,167 +1,180 @@
 package com.moon.casaprestamo.presentation.admin.supervision
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.moon.casaprestamo.data.models.PrestamoPendienteAdmin
-import com.moon.casaprestamo.ui.components.common.*
-import java.text.SimpleDateFormat
-import java.util.*
+import com.moon.casaprestamo.data.models.TicketDetalle
+import com.moon.casaprestamo.ui.components.supervision.BarraSuperior
+import com.moon.casaprestamo.ui.components.supervision.DetalleSolicitudModal
+import com.moon.casaprestamo.ui.components.supervision.EstadoCuentaLoadingDialog
+import com.moon.casaprestamo.ui.components.supervision.EstadoDeCuentaModal
+import com.moon.casaprestamo.ui.components.supervision.Rojo
+import com.moon.casaprestamo.ui.components.supervision.TabCartera
+import com.moon.casaprestamo.ui.components.supervision.TabLibroFolios
+import com.moon.casaprestamo.ui.components.supervision.TabSolicitudes
+import com.moon.casaprestamo.ui.components.supervision.TicketPagoModal
+import com.moon.casaprestamo.ui.components.supervision.Verde
 
-internal val Rojo     = Color(0xFFA6032F)
-internal val Oscuro   = Color(0xFF0F172A)
-internal val Verde    = Color(0xFF10B981)
-internal val Amarillo = Color(0xFFF59E0B)
+// ═══════════════════════════════════════════════════════════
+// ORQUESTADOR PRINCIPAL DE SUPERVISIÓN
+// ═══════════════════════════════════════════════════════════
 
-// Convierte "yyyy-MM-dd" a millis (medianoche UTC) para comparar
-internal fun fechaStringAMillis(fecha: String): Long? {
-    return try {
-        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(fecha)?.time
-    } catch (e: Exception) { null }
-}
-
-// Convierte "dd/MM/yyyy" (formato display) a "yyyy-MM-dd" (formato API)
-internal fun displayAApiDate(display: String): String {
-    return try {
-        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        val api = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        api.format(sdf.parse(display)!!)
-    } catch (e: Exception) { display }
-}
-
-internal fun milisAFecha(milis: Long?): String {
-    if (milis == null) return ""
-    return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(milis))
-}
-
-// ═════════════════════════════════════════════════════════════
-// CONTENT PRINCIPAL
-// ═════════════════════════════════════════════════════════════
-
+/**
+ * Pantalla de Supervisión unificada para Admin y Empleado.
+ *
+ * @param esAdmin Si es `false`:
+ *   - La tarjeta de RECAUDACIÓN muestra "Acceso restringido" y no es clicable.
+ *   - La pestaña SOLICITUDES no aparece en la navegación.
+ *   - Los diálogos de aprobación de préstamos quedan completamente bloqueados.
+ */
 @Composable
 fun AdminSupervisionContent(
-    uiState: SupervisionUiState,
-    idAprobador: Int,
-    onSetTab: (SupervisionTab) -> Unit,
-    onSetFechas: (String, String) -> Unit,
-    onCargarFolios: (String?) -> Unit,
-    onAbrirEstadoCuenta: (String) -> Unit,
-    onCerrarEstadoCuenta: () -> Unit,
-    onAbrirSolicitud: (PrestamoPendienteAdmin) -> Unit,
-    onCerrarSolicitud: () -> Unit,
-    onAprobar: (Int) -> Unit,
-    onRechazar: (Int) -> Unit,
-    onLimpiarMensaje: () -> Unit,
-    modifier: Modifier = Modifier
+    uiState:               SupervisionUiState,
+    idAprobador:           Int,
+    esAdmin:               Boolean = true,          // ← parámetro de rol
+    onSetTab:              (SupervisionTab) -> Unit,
+    onSetFechas:           (String, String) -> Unit,
+    onCargarFolios:        (String?) -> Unit,
+    onAbrirEstadoCuenta:   (String) -> Unit,
+    onCerrarEstadoCuenta:  () -> Unit,
+    onAbrirTicketPago:     (TicketDetalle) -> Unit,
+    onCerrarTicketPago:    () -> Unit,
+    onAbrirSolicitud:      (PrestamoPendienteAdmin) -> Unit,
+    onCerrarSolicitud:     () -> Unit,
+    onAprobar:             (Int) -> Unit,
+    onRechazar:            (Int) -> Unit,
+    onLimpiarMensaje:      () -> Unit,
+    modifier:              Modifier = Modifier
 ) {
-
     Column(
-        modifier = modifier.fillMaxSize().padding(vertical = 8.dp),
+        modifier            = modifier.fillMaxSize().padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+
+        // ── Barra superior (KPIs + selector de fechas) ────────
         BarraSuperior(
-            recaudacion           = if (uiState.tab == SupervisionTab.FOLIOS) uiState.recaudacionFolios else uiState.recaudacionCartera,
-            recaudacionCargando   = uiState.tab == SupervisionTab.FOLIOS && uiState.foliosLoading,
+            recaudacion         = if (uiState.tab == SupervisionTab.FOLIOS)
+                uiState.recaudacionFolios
+            else
+                uiState.recaudacionCartera,
+            recaudacionCargando = uiState.tab == SupervisionTab.FOLIOS && uiState.foliosLoading,
             solicitudesPendientes = uiState.solicitudesPendientes,
-            tabActual             = uiState.tab,
-            fechaDesde            = uiState.fechaDesde,
-            fechaHasta            = uiState.fechaHasta,
-            onLoad                = onSetFechas,
-            onClickRecaudacion    = { onSetTab(SupervisionTab.CARTERA) },
-            onClickSolicitudes    = { onSetTab(SupervisionTab.SOLICITUDES) },
-            onFechasChange        = onSetFechas,
+            tabActual           = uiState.tab,
+            fechaDesde          = uiState.fechaDesde,
+            fechaHasta          = uiState.fechaHasta,
+            onLoad              = onSetFechas,
+            // Empleado: RECAUDACIÓN no es clicable
+            onClickRecaudacion  = if (esAdmin) {
+                { onSetTab(SupervisionTab.CARTERA) }
+            } else {
+                { /* acceso restringido para empleados */ }
+            },
+            // Empleado: no se muestra la pestaña de SOLICITUDES
+            onClickSolicitudes  = if (esAdmin) {
+                { onSetTab(SupervisionTab.SOLICITUDES) }
+            } else {
+                { /* acceso restringido */ }
+            },
+            onFechasChange      = onSetFechas,
+            esAdmin             = esAdmin
         )
 
-        when (uiState.tab) {
+        // ── Contenido según pestaña activa ────────────────────
+        // Empleados nunca ven SupervisionTab.SOLICITUDES
+        val tabEfectivo = if (!esAdmin && uiState.tab == SupervisionTab.SOLICITUDES)
+            SupervisionTab.CARTERA
+        else
+            uiState.tab
+
+        when (tabEfectivo) {
             SupervisionTab.CARTERA -> TabCartera(
-                uiState   = uiState,
-                onSwitch  = { onSetTab(SupervisionTab.FOLIOS) },
-                onDetalle = onAbrirEstadoCuenta
+                cartera    = uiState.cartera,
+                fechaDesde = uiState.fechaDesde,
+                fechaHasta = uiState.fechaHasta,
+                isLoading  = uiState.carteraLoading,
+                onSwitch   = { onSetTab(SupervisionTab.FOLIOS) },
+                onDetalle  = onAbrirEstadoCuenta
             )
-            SupervisionTab.FOLIOS -> TabFolios(
-                uiState        = uiState,
+
+            SupervisionTab.FOLIOS -> TabLibroFolios(
+                folios         = uiState.folios,
+                fechaDesde     = uiState.fechaDesde,
+                fechaHasta     = uiState.fechaHasta,
+                isLoading      = uiState.foliosLoading,
                 onSwitch       = { onSetTab(SupervisionTab.CARTERA) },
                 onCargarFolios = onCargarFolios,
-                onClickFolio   = onAbrirEstadoCuenta
+                onClickTicket  = onAbrirTicketPago
             )
-            SupervisionTab.SOLICITUDES -> TabSolicitudes(
-                uiState        = uiState,
-                onVolver       = { onSetTab(SupervisionTab.CARTERA) },
-                onAbrirDetalle = onAbrirSolicitud
-            )
+
+            SupervisionTab.SOLICITUDES -> {
+                // Seguridad extra: si no es admin, jamás se llega aquí (tabEfectivo lo redirige),
+                // pero si llegara, permiteAprobar = false bloquea los diálogos.
+                TabSolicitudes(
+                    solicitudes    = uiState.solicitudes,
+                    permiteAprobar = esAdmin,
+                    isLoading      = uiState.solicitudesLoading,
+                    onVolver       = { onSetTab(SupervisionTab.CARTERA) },
+                    onAbrirDetalle = if (esAdmin) onAbrirSolicitud else { _ -> }
+                )
+            }
         }
 
+        // ── Toast de mensaje ──────────────────────────────────
         uiState.mensaje?.let { msg ->
             LaunchedEffect(msg) {
                 kotlinx.coroutines.delay(3000)
                 onLimpiarMensaje()
             }
             Surface(
-                color    = if (msg.contains("✅")) Verde.copy(0.12f) else Rojo.copy(0.12f),
+                color    = if (msg.contains("✅")) Verde.copy(alpha = 0.12f) else Rojo.copy(alpha = 0.12f),
                 shape    = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    msg, modifier = Modifier.padding(12.dp),
-                    color = if (msg.contains("✅")) Verde else Rojo,
+                    msg,
+                    modifier   = Modifier.padding(12.dp),
+                    color      = if (msg.contains("✅")) Verde else Rojo,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
     }
 
-    // Modales
+    // ── Modales ───────────────────────────────────────────────
+
     if (uiState.estadoCuentaLoading) {
-        Dialog(onDismissRequest = onCerrarEstadoCuenta) {
-            Box(Modifier.size(80.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Rojo)
-            }
-        }
+        EstadoCuentaLoadingDialog(onDismiss = onCerrarEstadoCuenta)
     }
+
     uiState.estadoCuenta?.let {
         EstadoDeCuentaModal(detalle = it, onDismiss = onCerrarEstadoCuenta)
     }
-    uiState.solicitudDetalle?.let { sol ->
-        DetalleSolicitudModal(
-            prestamo   = sol,
-            onDismiss  = onCerrarSolicitud,
-            onAprobar  = { onAprobar(sol.idPrestamo) },
-            onRechazar = { onRechazar(sol.idPrestamo) }
-        )
+
+    // Ticket de pago (Libro de Folios)
+    uiState.ticketPagoAbierto?.let { ticket ->
+        TicketPagoModal(ticket = ticket, onDismiss = onCerrarTicketPago)
+    }
+
+    // Seguridad: diálogo de aprobación solo disponible para Admin
+    if (esAdmin) {
+        uiState.solicitudDetalle?.let { sol ->
+            DetalleSolicitudModal(
+                prestamo   = sol,
+                onDismiss  = onCerrarSolicitud,
+                onAprobar  = { onAprobar(sol.idPrestamo) },
+                onRechazar = { onRechazar(sol.idPrestamo) }
+            )
+        }
     }
 }
-
-
-
-// ─── Micro-helpers ───────────────────────────────────────────
-
-@Composable
-internal fun TH(text: String, modifier: Modifier) =
-    Text(text, modifier = modifier, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.5.sp, color = MaterialTheme.colorScheme.outline)
-
-@Composable
-internal fun CalH(text: String, modifier: Modifier) =
-    Text(text, modifier = modifier, fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF94A3B8))
-
-@Composable
-internal fun CondItem(label: String, value: String, modifier: Modifier) =
-    Column(modifier) {
-        Text(label, fontSize = 9.sp, color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Bold)
-        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Black)
-    }
-
-@Composable
-internal fun LoadBox() =
-    Box(Modifier.fillMaxWidth().padding(40.dp), Alignment.Center) { CircularProgressIndicator(color = Rojo) }
-
-@Composable
-internal fun EmptyBox(msg: String) =
-    Box(Modifier.fillMaxWidth().padding(40.dp), Alignment.Center) { Text(msg, color = MaterialTheme.colorScheme.outline) }

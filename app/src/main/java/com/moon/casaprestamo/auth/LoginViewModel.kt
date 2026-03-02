@@ -24,6 +24,20 @@ sealed class LoginEvent {
     object DismissError : LoginEvent()
 }
 
+// ── NUEVO: RequiereVerificacion lleva el email para precargarlo ──────────────
+sealed class LoginResult {
+    data class Success(val usuario: Usuario)           : LoginResult()
+    data class Error(val message: String)              : LoginResult()
+    data class RequiereVerificacion(val email: String) : LoginResult()
+}
+
+data class LoginUiState(
+    val username:    String       = "",
+    val password:    String       = "",
+    val isLoading:   Boolean      = false,
+    val loginResult: LoginResult? = null
+)
+
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val apiService: ApiService
@@ -58,20 +72,26 @@ class LoginViewModel @Inject constructor(
                 Log.d(TAG, "HTTP ${response.code()} | body: ${response.body()}")
 
                 if (response.isSuccessful) {
-                    val body = response.body()
+                    val body    = response.body()
                     val usuario = body?.usuario
 
                     when {
                         usuario == null -> {
                             _uiState.update {
-                                it.copy(isLoading = false, loginResult = LoginResult.Error(body?.detail ?: "Error desconocido"))
+                                it.copy(
+                                    isLoading   = false,
+                                    loginResult = LoginResult.Error(body?.detail ?: "Error desconocido")
+                                )
                             }
                         }
+                        // Servidor devolvió 200 pero emailVerificado = false (caso edge)
                         !usuario.emailVerificado -> {
-                            // El servidor también retorna 403, pero si por alguna razón llega 200
-                            // con emailVerificado=false lo manejamos aquí
+                            Log.w(TAG, "⚠️ emailVerificado=false en 200 → redirigir a verificación")
                             _uiState.update {
-                                it.copy(isLoading = false, loginResult = LoginResult.Error("Email no verificado. Revisa tu correo."))
+                                it.copy(
+                                    isLoading   = false,
+                                    loginResult = LoginResult.RequiereVerificacion(email)
+                                )
                             }
                         }
                         else -> {
@@ -81,15 +101,34 @@ class LoginViewModel @Inject constructor(
                             }
                         }
                     }
+
                 } else {
-                    val msg = response.getErrorMessage()
-                    Log.e(TAG, "❌ Error ${response.code()}: $msg")
-                    _uiState.update { it.copy(isLoading = false, loginResult = LoginResult.Error(msg)) }
+                    val errorMsg = response.getErrorMessage()
+                    Log.e(TAG, "❌ Error ${response.code()}: $errorMsg")
+
+                    // 403 "Email no verificado" → ir a verificación con el email precargado
+                    if (response.code() == 403 && errorMsg.contains("verificado", ignoreCase = true)) {
+                        Log.w(TAG, "⚠️ 403 no verificado → redirigir a VerificarEmailScreen")
+                        _uiState.update {
+                            it.copy(
+                                isLoading   = false,
+                                loginResult = LoginResult.RequiereVerificacion(email)
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(isLoading = false, loginResult = LoginResult.Error(errorMsg))
+                        }
+                    }
                 }
+
             } catch (e: Exception) {
                 Log.e(TAG, "💥 Excepción", e)
                 _uiState.update {
-                    it.copy(isLoading = false, loginResult = LoginResult.Error("Error de red: ${e.localizedMessage}"))
+                    it.copy(
+                        isLoading   = false,
+                        loginResult = LoginResult.Error("Error de red: ${e.localizedMessage}")
+                    )
                 }
             }
         }

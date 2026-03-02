@@ -337,9 +337,9 @@ data class TicketDetalle(
     val tipo: String,
     @SerializedName("folio_prestamo")  val folioPrestamo: String,
     val nombre: String,
-    @SerializedName("apellido_paterno") val apellidoPaterno: String
+    @SerializedName("apellido_paterno") val apellidoPaterno: String,
+    @SerializedName("nombre_empleado")  val nombreEmpleado: String? = null
 )
-
 data class TicketCompleto(
     val status: String,
     val ticket: TicketPrestamoDetalle

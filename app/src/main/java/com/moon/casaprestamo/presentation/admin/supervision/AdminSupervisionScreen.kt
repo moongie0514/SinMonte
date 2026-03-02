@@ -1,5 +1,6 @@
 package com.moon.casaprestamo.presentation.admin.supervision
 
+import android.R.attr.id
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -16,17 +17,18 @@ fun AdminSupervisionScreen(
     AdminSupervisionContent(
         uiState              = uiState,
         idAprobador          = idAprobador,
-        esAdmin             = esAdmin,
+        esAdmin              = esAdmin,
         onSetTab             = viewModel::setTab,
         onSetFechas          = viewModel::setFechas,
         onCargarFolios       = viewModel::cargarFolios,
         onAbrirEstadoCuenta  = viewModel::abrirEstadoCuenta,
         onCerrarEstadoCuenta = viewModel::cerrarEstadoCuenta,
+        onAbrirTicketPago    = viewModel::abrirTicketPago,   // ← nuevo
+        onCerrarTicketPago   = viewModel::cerrarTicketPago,  // ← nuevo
         onAbrirSolicitud     = viewModel::abrirDetalleSolicitud,
         onCerrarSolicitud    = viewModel::cerrarDetalleSolicitud,
-        onAprobar            = { id -> viewModel.aprobarPrestamo(id, idAprobador) },
-        onRechazar           = { id -> viewModel.rechazarPrestamo(id, idAprobador) },
-        onLimpiarMensaje     = viewModel::limpiarMensaje,
-        modifier             = modifier
+        onAprobar            = { viewModel.aprobarPrestamo(id, idAprobador) },
+        onRechazar           = { viewModel.rechazarPrestamo(id, idAprobador) },
+        onLimpiarMensaje     = viewModel::limpiarMensaje
     )
 }

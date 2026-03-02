@@ -51,6 +51,7 @@ data class SupervisionUiState(
     val estadoCuenta: TicketPrestamoDetalle? = null,
     val estadoCuentaLoading: Boolean = false,
     val solicitudDetalle: PrestamoPendienteAdmin? = null,
+    val ticketPagoAbierto: TicketDetalle? = null,
     val fechaDesde: String = "",
     val fechaHasta: String = "",
     val mensaje: String? = null,
@@ -308,6 +309,12 @@ class SupervisionViewModel @Inject constructor(
             }
         }
     }
+    fun abrirTicketPago(ticket: TicketDetalle) =
+        _uiState.update { it.copy(ticketPagoAbierto = ticket) }
+
+    fun cerrarTicketPago() =
+        _uiState.update { it.copy(ticketPagoAbierto = null) }
+
 
     fun cargarSolicitudes() {
         viewModelScope.launch {

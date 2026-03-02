@@ -67,7 +67,14 @@ fun AppNavigation() {
                     }
                 },
                 onNavigateToRegister = { navController.navigate("registro_usuario") },
-                onNavigateToForgot   = { navController.navigate("forgot_password") }
+                onNavigateToForgot   = { navController.navigate("forgot_password") },
+                onRequiereVerificacion = { email ->
+                    navController.navigate("verificar_email/${email}") {
+                        // No apilamos la pantalla de login encima — si el usuario presiona
+                        // "Volver al login" desde VerificarEmailScreen, regresa limpio
+                        popUpTo("login") { inclusive = false }
+                    }
+                }
             )
         }
 
@@ -95,10 +102,15 @@ fun AppNavigation() {
             VerificarEmailScreen(
                 email         = email,
                 onVerificado  = {
-                    navController.navigate("login") { popUpTo(0) }
+                    // Verificación exitosa → al login para que inicie sesión
+                    navController.navigate("login") {
+                        popUpTo("verificar_email/{email}") { inclusive = true }
+                    }
                 },
                 onBackToLogin = {
-                    navController.navigate("login") { popUpTo(0) }
+                    navController.navigate("login") {
+                        popUpTo("verificar_email/{email}") { inclusive = true }
+                    }
                 }
             )
         }
