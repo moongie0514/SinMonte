@@ -53,6 +53,8 @@ data class CarteraUiState(
     val saldoPendiente: Double = 0.0,
     val mensajeAviso: String? = null,
     val prestamos: List<PrestamoData> = emptyList(),
+    val pagoEnProceso: Int? = null,
+    val mensajePago: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )

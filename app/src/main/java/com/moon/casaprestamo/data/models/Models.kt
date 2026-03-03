@@ -65,8 +65,7 @@ data class AprobarPrestamoRequest(
 )
 
 data class RegistrarPagoRequest(
-    @SerializedName("id_pago")     val id_pago: Int,
-    @SerializedName("id_empleado") val id_empleado: Int
+    @SerializedName("id_pago")     val id_pago: Int
 )
 
 data class CrearEmpleadoRequest(
@@ -181,6 +180,12 @@ data class PagoData(
     @SerializedName("fecha_pago")        val fechaPago: String?,
     @SerializedName("estado")            val estado: String          // "pagado" | "pendiente" | "atrasado"
 )
+data class RegistrarPagoClienteRequest(
+    @SerializedName("id_pago")     val idPago:     Int,
+    @SerializedName("id_cliente")  val idCliente:  Int,
+    @SerializedName("metodo_pago") val metodoPago: String = "EFECTIVO"
+)
+
 
 // POST /cliente/solicitar_credito
 data class SolicitudCreditoResponse(

@@ -60,7 +60,6 @@ class EmpleadoCobranzaViewModel @Inject constructor(
 
                 val request = RegistrarPagoRequest(
                     id_pago = idPago,
-                    id_empleado = idEmpleado
                 )
                 val response = apiService.registrarPago(request)
 
@@ -111,7 +110,6 @@ class EmpleadoCobranzaViewModel @Inject constructor(
                 for (pago in pagosDePrestamo) {
                     val request = RegistrarPagoRequest(
                         id_pago = pago.id_pago,
-                        id_empleado = idEmpleado
                     )
                     val response = apiService.registrarPago(request)
 

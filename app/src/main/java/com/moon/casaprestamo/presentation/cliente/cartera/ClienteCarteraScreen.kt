@@ -14,11 +14,9 @@ fun ClienteCarteraScreen(
     idCliente: Int,
     viewModel: ClienteCarteraViewModel = hiltViewModel()
 ) {
-    // ✅ StateFlow requiere collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState      by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // ✅ Recarga cada vez que la pantalla vuelve a primer plano
     LaunchedEffect(idCliente, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.cargarCartera(idCliente)
@@ -27,6 +25,8 @@ fun ClienteCarteraScreen(
 
     ClienteCarteraContent(
         uiState  = uiState,
-        onRetry  = { viewModel.cargarCartera(idCliente) }
+        onRetry  = { viewModel.cargarCartera(idCliente) },
+        onPagar  = { idPago -> viewModel.registrarPago(idPago) },          // ← NUEVO
+        onLimpiarMensaje = viewModel::limpiarMensajePago                   // ← NUEVO
     )
 }

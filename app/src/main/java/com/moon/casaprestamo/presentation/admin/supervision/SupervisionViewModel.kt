@@ -344,17 +344,24 @@ class SupervisionViewModel @Inject constructor(
     private fun procesarPrestamo(id: Int, esAprobado: Boolean, idAprobador: Int) {
         viewModelScope.launch {
             try {
-                val r = apiService.procesarPrestamo(
-                    AprobarPrestamoRequest(idPrestamo = id, accion = if (esAprobado) "aprobar" else "rechazar", idEmpleado = idAprobador)
-                )
+                val accion  = if (esAprobado) "aprobar" else "rechazar"
+                val request = AprobarPrestamoRequest(idPrestamo = id, accion = accion, idEmpleado = idAprobador)
+                Log.d(TAG, "procesarPrestamo → id=$id accion=$accion idAprobador=$idAprobador")
+
+                val r = apiService.procesarPrestamo(request)
+                Log.d(TAG, "procesarPrestamo HTTP ${r.code()} — isSuccessful=${r.isSuccessful}")
+
                 if (r.isSuccessful) {
                     _uiState.update { it.copy(mensaje = if (esAprobado) "✅ Préstamo aprobado" else "Préstamo rechazado", solicitudDetalle = null) }
                     cargarSolicitudes()
                     cargarEstadisticas()
                 } else {
-                    _uiState.update { it.copy(mensaje = "Error: ${r.code()}") }
+                    val errorBody = r.errorBody()?.string()
+                    Log.e(TAG, "❌ procesarPrestamo error ${r.code()} — body=$errorBody")
+                    _uiState.update { it.copy(mensaje = "Error: ${r.code()} — $errorBody") }
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "💥 procesarPrestamo exception: ${e.localizedMessage}")
                 _uiState.update { it.copy(mensaje = "Error: ${e.localizedMessage}") }
             }
         }
