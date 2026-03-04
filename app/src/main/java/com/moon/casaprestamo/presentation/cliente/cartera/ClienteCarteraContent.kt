@@ -62,18 +62,16 @@ fun ClienteCarteraContent(
             // ── SECCIÓN 1: RESUMEN GENERAL ───────────────────────
             item {
                 LazyRow(
-                    contentPadding        = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
+                    contentPadding        = PaddingValues(vertical = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item { SummaryCard("CAPITAL",   "$${String.format("%,.0f", uiState.capitalOtorgado)}", Icons.Default.AttachMoney, Color(0xFF2563EB)) }
-                    item { SummaryCard("LIQUIDADO", "$${String.format("%,.0f", uiState.montoLiquidado)}",  Icons.Default.TrendingUp,  Color(0xFF10B981)) }
-                    item { SummaryCard("PENDIENTE", "$${String.format("%,.0f", uiState.saldoPendiente)}",  Icons.Default.PriorityHigh, colorScheme.primary) }
-                }
+                    }
             }
 
             // ── SECCIÓN 2: CRÉDITO VIGENTE ───────────────────────
             item {
-                Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                Column {
                     HeaderCredito(folio = "P-${prestamoActual?.prestamo?.idPrestamo ?: "0"}")
                     Spacer(Modifier.height(16.dp))
                     Surface(
@@ -85,7 +83,7 @@ fun ClienteCarteraContent(
                             modifier              = Modifier.padding(16.dp).fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            SpecificCard("SALDO",  "$${String.format("%,.0f", uiState.saldoPendiente)}",  Color(0xFF0F172A), Color.White, Modifier.weight(1f))
+                            SpecificCard("PENDIENTE",  "$${String.format("%,.0f", uiState.saldoPendiente)}",  Color(0xFF0F172A), Color.White, Modifier.weight(1f))
                             SpecificCard("PAGADO", "$${String.format("%,.0f", uiState.montoLiquidado)}", Color(0xFF10B981), Color.White, Modifier.weight(1f))
                         }
                     }
@@ -94,11 +92,11 @@ fun ClienteCarteraContent(
 
             // ── SECCIÓN 3: ENCABEZADO DE TABLA ───────────────────
             item {
-                Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 32.dp, bottom = 8.dp)) {
+                Column(modifier = Modifier.padding(end = 24.dp, top = 32.dp, bottom = 8.dp)) {
                     Text("CALENDARIO DE PAGOS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        TableHeaderText("NO.",   Modifier.width(30.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        TableHeaderText("NO.",   Modifier.weight(0.5f))
                         TableHeaderText("FECHA", Modifier.weight(1f))
                         TableHeaderText("MONTO", Modifier.weight(1f))
                         TableHeaderText("",      Modifier.width(90.dp), TextAlign.End)
@@ -108,7 +106,7 @@ fun ClienteCarteraContent(
 
             // ── SECCIÓN 4: FILAS DE PAGOS ────────────────────────
             items(items = pagosVigentes, key = { it.idPago }) { pago ->
-                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                Box{
                     PagoRowCliente(
                         pago           = pago,
                         enProceso      = uiState.pagoEnProceso == pago.idPago,
