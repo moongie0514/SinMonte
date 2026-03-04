@@ -16,7 +16,7 @@ fun AdminSupervisionScreen(
     AdminSupervisionContent(
         uiState              = uiState,
         idAprobador          = idAprobador,
-        esAdmin              = esAdmin,
+        esAdmin             = esAdmin,
         onSetTab             = viewModel::setTab,
         onSetFechas          = viewModel::setFechas,
         onCargarFolios       = viewModel::cargarFolios,

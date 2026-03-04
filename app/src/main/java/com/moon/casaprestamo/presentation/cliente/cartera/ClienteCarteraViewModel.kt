@@ -36,30 +36,34 @@ class ClienteCarteraViewModel @Inject constructor(
                 Log.d(TAG, "HTTP ${response.code()}")
 
                 if (response.isSuccessful) {
-                    val prestamosOriginal = response.body() ?: emptyList()
-                    val prestamos = prestamosOriginal.filterNot {
-                        it.estado.equals("RECHAZADO", ignoreCase = true)
+                    val prestamos = response.body() ?: emptyList()
+                    val estadosVigentes = setOf("ACTIVO", "MORA", "MOROSO")
+                    val prestamosVigentes = prestamos.filter { it.estado.uppercase() in estadosVigentes }
+
+                    val pagosPorPrestamo = mutableMapOf<Int, List<PagoData>>()
+                    for (prestamo in prestamos) {
+                        try {
+                            val pagosResp = apiService.obtenerCalendarioPagos(idCliente, prestamo.idPrestamo)
+                            pagosPorPrestamo[prestamo.idPrestamo] = if (pagosResp.isSuccessful) pagosResp.body().orEmpty() else emptyList()
+                        } catch (_: Exception) {
+                            pagosPorPrestamo[prestamo.idPrestamo] = emptyList()
+                        }
                     }
 
-                    prestamos.forEach { p ->
-                        Log.d(TAG, "préstamo ${p.idPrestamo} estado=${p.estado} montoTotal=${p.montoTotal} saldoPendiente=${p.saldoPendiente}")
+                    val prestamosConPagos = prestamos.map { p ->
+                        PrestamoConPagos(prestamo = p, pagos = pagosPorPrestamo[p.idPrestamo].orEmpty())
                     }
 
-                    val estadosCapital = setOf("ACTIVO", "MORA", "MOROSO", "LIQUIDADO")
-                    val estadosSaldo   = setOf("ACTIVO", "MORA", "MOROSO")
-
-                    val capitalOtorgado = prestamos
-                        .filter { it.estado.uppercase() in estadosCapital }
-                        .sumOf { it.montoTotal }
+                    val capitalOtorgado = prestamosVigentes.sumOf { it.montoTotal }.coerceAtLeast(0.0)
+                    val saldoPendiente = prestamosVigentes.sumOf { it.saldoPendiente }.coerceAtLeast(0.0)
+                    val montoLiquidado = prestamosConPagos
+                        .filter { it.prestamo.estado.uppercase() in estadosVigentes }
+                        .sumOf { pcp ->
+                            pcp.pagos.filter { it.estado.equals("pagado", ignoreCase = true) }.sumOf { it.monto }
+                        }
                         .coerceAtLeast(0.0)
 
-                    val saldoPendiente = prestamos
-                        .filter { it.estado.uppercase() in estadosSaldo }
-                        .sumOf { it.saldoPendiente }
-                        .coerceAtLeast(0.0)
-
-                    val mesesTotales      = prestamos.sumOf { it.plazoMeses }
-                    val prestamosConPagos = prestamos.map { PrestamoConPagos(prestamo = it, pagos = emptyList()) }
+                    val mesesTotales = prestamosVigentes.sumOf { it.plazoMeses }
 
                     // montoLiquidado se calculará correctamente en cargarPagos
                     // desde los pagos reales — aquí lo dejamos en 0 temporalmente
@@ -77,14 +81,6 @@ class ClienteCarteraViewModel @Inject constructor(
                             error             = null
                         )
                     }
-
-                    val prestamoActual = prestamos.firstOrNull {
-                        it.estado.equals("ACTIVO",   true) ||
-                                it.estado.equals("MORA",     true) ||
-                                it.estado.equals("MOROSO",   true)
-                    } ?: prestamos.firstOrNull { it.estado.equals("LIQUIDADO", true) }
-
-                    prestamoActual?.let { cargarPagos(idCliente, it.idPrestamo) }
 
                 } else {
                     val error = try {

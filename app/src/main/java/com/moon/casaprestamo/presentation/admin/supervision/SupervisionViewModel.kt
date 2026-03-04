@@ -17,6 +17,7 @@ import java.util.*
 import javax.inject.Inject
 
 private const val TAG = "SUPERVISION_VM"
+private const val FALLBACK_EMPLEADO_ID = 1
 
 enum class SupervisionTab { CARTERA, FOLIOS, SOLICITUDES }
 
@@ -66,7 +67,6 @@ class SupervisionViewModel @Inject constructor(
     private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
-
     private val _uiState = MutableStateFlow(SupervisionUiState())
     val uiState: StateFlow<SupervisionUiState> = _uiState.asStateFlow()
 
@@ -79,7 +79,6 @@ class SupervisionViewModel @Inject constructor(
 
     fun setTab(tab: SupervisionTab) {
         _uiState.update { it.copy(tab = tab, mensaje = null, error = null) }
-        // FIX: refrescar recaudacion si está en 0 (ocurre al volver de otro módulo)
         // Mantener KPI de cartera independiente del KPI de folios para evitar parpadeos entre pestañas
         if (_uiState.value.recaudacionCartera == 0.0) cargarEstadisticas()
         when (tab) {
@@ -91,6 +90,7 @@ class SupervisionViewModel @Inject constructor(
 
     fun setFechas(desde: String, hasta: String) {
         _uiState.update { it.copy(fechaDesde = desde, fechaHasta = hasta) }
+
         if (_uiState.value.tab != SupervisionTab.FOLIOS) return
 
         val desdeApi = displayDateToApi(desde)
@@ -188,8 +188,15 @@ class SupervisionViewModel @Inject constructor(
             _uiState.update { it.copy(foliosLoading = true, error = null) }
             Log.d(TAG, "⏳ cargarFolios() — fecha=$fecha")
             try {
-                val r = apiService.obtenerFoliosAdmin(fecha = fecha)
+                var r = apiService.obtenerFoliosAdmin(fecha = fecha)
                 Log.d(TAG, "📡 cargarFolios HTTP ${r.code()} — isSuccessful=${r.isSuccessful}")
+
+                // Railway desfasado: si /admin/folios aún no está desplegado, reutilizar corte de caja
+                if (r.code() == 404) {
+                    Log.w(TAG, "⚠️ /admin/folios no disponible, fallback a /empleado/corte_caja")
+                    r = apiService.obtenerCorteCaja(idEmpleado = FALLBACK_EMPLEADO_ID, fecha = fecha)
+                    Log.d(TAG, "📡 fallback corte_caja HTTP ${r.code()} — isSuccessful=${r.isSuccessful}")
+                }
 
                 if (r.isSuccessful) {
                     val body = r.body()
@@ -230,7 +237,10 @@ class SupervisionViewModel @Inject constructor(
         repeat(diasMaximos) { indice ->
             val fecha = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -indice) }.time
             val fechaApi = apiDateFormat.format(fecha)
-            val resp: Response<CorteCajaResponse> = apiService.obtenerFoliosAdmin(fecha = fechaApi)
+            var resp: Response<CorteCajaResponse> = apiService.obtenerFoliosAdmin(fecha = fechaApi)
+            if (resp.code() == 404) {
+                resp = apiService.obtenerCorteCaja(idEmpleado = FALLBACK_EMPLEADO_ID, fecha = fechaApi)
+            }
             if (!resp.isSuccessful) {
                 Log.w(TAG, "⚠️ histórico $fechaApi HTTP ${resp.code()}")
                 return@repeat
@@ -286,7 +296,10 @@ class SupervisionViewModel @Inject constructor(
 
                 while (!calendario.after(limite)) {
                     val fechaApi = apiDateFormat.format(calendario.time)
-                    val resp = apiService.obtenerFoliosAdmin(fecha = fechaApi)
+                    var resp = apiService.obtenerFoliosAdmin(fecha = fechaApi)
+                    if (resp.code() == 404) {
+                        resp = apiService.obtenerCorteCaja(idEmpleado = FALLBACK_EMPLEADO_ID, fecha = fechaApi)
+                    }
                     if (resp.isSuccessful) {
                         val body = resp.body()
                         body?.movimientos?.forEach { t -> acumulados.putIfAbsent(t.idTicket, t) }
@@ -309,13 +322,6 @@ class SupervisionViewModel @Inject constructor(
             }
         }
     }
-    fun abrirTicketPago(ticket: TicketDetalle) =
-        _uiState.update { it.copy(ticketPagoAbierto = ticket) }
-
-    fun cerrarTicketPago() =
-        _uiState.update { it.copy(ticketPagoAbierto = null) }
-
-
     fun cargarSolicitudes() {
         viewModelScope.launch {
             _uiState.update { it.copy(solicitudesLoading = true, error = null) }
@@ -344,21 +350,22 @@ class SupervisionViewModel @Inject constructor(
     private fun procesarPrestamo(id: Int, esAprobado: Boolean, idAprobador: Int) {
         viewModelScope.launch {
             try {
-                val accion  = if (esAprobado) "aprobar" else "rechazar"
-                val request = AprobarPrestamoRequest(idPrestamo = id, accion = accion, idEmpleado = idAprobador)
-                Log.d(TAG, "procesarPrestamo → id=$id accion=$accion idAprobador=$idAprobador")
-
-                val r = apiService.procesarPrestamo(request)
-                Log.d(TAG, "procesarPrestamo HTTP ${r.code()} — isSuccessful=${r.isSuccessful}")
-
+                Log.d(TAG, "⏳ procesarPrestamo id=$id accion=${if (esAprobado) "aprobar" else "rechazar"} aprobador=$idAprobador")
+                val r = apiService.procesarPrestamo(
+                    AprobarPrestamoRequest(idPrestamo = id, accion = if (esAprobado) "aprobar" else "rechazar", idEmpleado = idAprobador)
+                )
+                Log.d(TAG, "📡 procesarPrestamo HTTP ${r.code()} — isSuccessful=${r.isSuccessful}")
                 if (r.isSuccessful) {
                     _uiState.update { it.copy(mensaje = if (esAprobado) "✅ Préstamo aprobado" else "Préstamo rechazado", solicitudDetalle = null) }
                     cargarSolicitudes()
                     cargarEstadisticas()
                 } else {
-                    val errorBody = r.errorBody()?.string()
-                    Log.e(TAG, "❌ procesarPrestamo error ${r.code()} — body=$errorBody")
-                    _uiState.update { it.copy(mensaje = "Error: ${r.code()} — $errorBody") }
+                    val msg = if (r.code() == 404) {
+                        "Error 404: endpoint de aprobación no desplegado en backend"
+                    } else {
+                        "Error: ${r.code()}"
+                    }
+                    _uiState.update { it.copy(mensaje = msg) }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "💥 procesarPrestamo exception: ${e.localizedMessage}")

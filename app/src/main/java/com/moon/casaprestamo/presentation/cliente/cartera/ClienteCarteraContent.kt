@@ -2,6 +2,7 @@ package com.moon.casaprestamo.presentation.cliente.cartera
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -12,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.moon.casaprestamo.data.models.CarteraUiState
 import com.moon.casaprestamo.data.models.PagoData
+import com.moon.casaprestamo.data.models.PrestamoConPagos
 
 @Composable
 fun ClienteCarteraContent(
@@ -30,181 +33,142 @@ fun ClienteCarteraContent(
     onPagar:          (idPago: Int) -> Unit,   // ← NUEVO
     onLimpiarMensaje: () -> Unit                // ← NUEVO
 ) {
-    val colorScheme    = MaterialTheme.colorScheme
-    val snackbarState  = remember { SnackbarHostState() }
+    val colorScheme = MaterialTheme.colorScheme
+    var expandedPrestamoId by rememberSaveable { mutableStateOf<Int?>(null) }
 
-    // Mostrar resultado del pago en Snackbar
-    LaunchedEffect(uiState.mensajePago) {
-        uiState.mensajePago?.let {
-            snackbarState.showSnackbar(it)
-            onLimpiarMensaje()
+    if (uiState.isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = colorScheme.primary)
         }
+        return
     }
 
-    val prestamoActual = uiState.prestamosConPagos.firstOrNull {
-        it.prestamo.estado.equals("ACTIVO", ignoreCase = true) ||
-                it.prestamo.estado.equals("MORA",   ignoreCase = true)
-    } ?: uiState.prestamosConPagos.firstOrNull()
-    val pagosVigentes = prestamoActual?.pagos ?: emptyList()
-
-    Scaffold(snackbarHost = { SnackbarHost(snackbarState) }) { padding ->
-        if (uiState.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = colorScheme.primary)
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colorScheme.background),
+        contentPadding = PaddingValues(bottom = 32.dp)
+    ) {
+        item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    SummaryCard("CAPITAL", "$${String.format("%,.0f", uiState.capitalOtorgado)}", Icons.Default.AttachMoney, Color(0xFF2563EB))
+                }
+                item {
+                    SummaryCard("LIQUIDADO", "$${String.format("%,.0f", uiState.montoLiquidado)}", Icons.Default.TrendingUp, Color(0xFF10B981))
+                }
+                item {
+                    SummaryCard("PENDIENTE", "$${String.format("%,.0f", uiState.saldoPendiente)}", Icons.Default.PriorityHigh, colorScheme.primary)
+                }
             }
             return@Scaffold
         }
 
-        LazyColumn(
-            modifier       = Modifier.fillMaxSize().background(colorScheme.background),
-            contentPadding = PaddingValues(bottom = 32.dp)
-        ) {
-            // ── SECCIÓN 1: RESUMEN GENERAL ───────────────────────
+        item {
+            Text(
+                "HISTORIAL DE PRÉSTAMOS",
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                fontWeight = FontWeight.Black,
+                fontSize = 13.sp
+            )
+        }
+
+        items(uiState.prestamosConPagos, key = { it.prestamo.idPrestamo }) { prestamoConPagos ->
+            val prestamo = prestamoConPagos.prestamo
+            val isExpanded = expandedPrestamoId == prestamo.idPrestamo
+
+            PrestamoHistorialCard(
+                prestamoConPagos = prestamoConPagos,
+                isExpanded = isExpanded,
+                onToggle = {
+                    expandedPrestamoId = if (isExpanded) null else prestamo.idPrestamo
+                }
+            )
+        }
+
+        if (uiState.prestamosConPagos.isEmpty()) {
             item {
-                LazyRow(
-                    contentPadding        = PaddingValues(vertical = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item { SummaryCard("CAPITAL",   "$${String.format("%,.0f", uiState.capitalOtorgado)}", Icons.Default.AttachMoney, Color(0xFF2563EB)) }
-                    }
-            }
-
-            // ── SECCIÓN 2: CRÉDITO VIGENTE ───────────────────────
-            item {
-                Column {
-                    HeaderCredito(folio = "P-${prestamoActual?.prestamo?.idPrestamo ?: "0"}")
-                    Spacer(Modifier.height(16.dp))
-                    Surface(
-                        shape  = RoundedCornerShape(24.dp),
-                        color  = colorScheme.surface,
-                        border = BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.2f))
-                    ) {
-                        Row(
-                            modifier              = Modifier.padding(16.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            SpecificCard("PENDIENTE",  "$${String.format("%,.0f", uiState.saldoPendiente)}",  Color(0xFF0F172A), Color.White, Modifier.weight(1f))
-                            SpecificCard("PAGADO", "$${String.format("%,.0f", uiState.montoLiquidado)}", Color(0xFF10B981), Color.White, Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-
-            // ── SECCIÓN 3: ENCABEZADO DE TABLA ───────────────────
-            item {
-                Column(modifier = Modifier.padding(end = 24.dp, top = 32.dp, bottom = 8.dp)) {
-                    Text("CALENDARIO DE PAGOS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        TableHeaderText("NO.",   Modifier.weight(0.5f))
-                        TableHeaderText("FECHA", Modifier.weight(1f))
-                        TableHeaderText("MONTO", Modifier.weight(1f))
-                        TableHeaderText("",      Modifier.width(90.dp), TextAlign.End)
-                    }
-                }
-            }
-
-            // ── SECCIÓN 4: FILAS DE PAGOS ────────────────────────
-            items(items = pagosVigentes, key = { it.idPago }) { pago ->
-                Box{
-                    PagoRowCliente(
-                        pago           = pago,
-                        enProceso      = uiState.pagoEnProceso == pago.idPago,
-                        onPagar        = { onPagar(pago.idPago) }
-                    )
-                }
-            }
-
-            if (pagosVigentes.isEmpty()) {
-                item {
-                    Text(
-                        text      = "No hay calendario disponible para este préstamo.",
-                        modifier  = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
-                        color     = Color(0xFF64748B),
-                        textAlign = TextAlign.Center
-                    )
-                }
+                Text(
+                    text = "No hay préstamos registrados.",
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp),
+                    color = Color(0xFF64748B),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
 }
 
-// ── Fila de pago con botón PAGAR para el cliente ─────────────────
 @Composable
-fun PagoRowCliente(
-    pago:      PagoData,
-    enProceso: Boolean,
-    onPagar:   () -> Unit
+private fun PrestamoHistorialCard(
+    prestamoConPagos: PrestamoConPagos,
+    isExpanded: Boolean,
+    onToggle: () -> Unit
 ) {
-    Row(
-        modifier          = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            pago.numeroPago.toString(),
-            modifier   = Modifier.width(30.dp),
-            fontSize   = 12.sp,
-            color      = Color(0xFF94A3B8),
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            pago.fechaVencimiento ?: "",
-            modifier   = Modifier.weight(1f),
-            fontSize   = 12.sp,
-            fontWeight = FontWeight.Black
-        )
-        Text(
-            "$${String.format("%,.0f", pago.monto)}",
-            modifier   = Modifier.weight(1f),
-            fontSize   = 12.sp,
-            fontWeight = FontWeight.Black
-        )
+    val prestamo = prestamoConPagos.prestamo
+    val estado = prestamo.estado.uppercase()
+    val pagado = (prestamo.montoTotal - prestamo.saldoPendiente).coerceAtLeast(0.0)
+    val pendiente = prestamo.saldoPendiente.coerceAtLeast(0.0)
+    val progreso = if (prestamo.montoTotal > 0.0) (pagado / prestamo.montoTotal).coerceIn(0.0, 1.0) else 0.0
 
-        // Columna de acción — 90dp para alinear con el header vacío
-        Box(modifier = Modifier.width(90.dp), contentAlignment = Alignment.CenterEnd) {
-            when (pago.estado.lowercase()) {
-                "pagado" -> {
-                    Surface(color = Color(0xFF10B981), shape = RoundedCornerShape(8.dp)) {
-                        Text(
-                            "PAGADO",
-                            modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize   = 8.sp,
-                            color      = Color.White,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
+    val estadoColor = when (estado) {
+        "ACTIVO" -> Color(0xFF10B981)
+        "MORA", "MOROSO" -> Color(0xFFF59E0B)
+        "LIQUIDADO" -> Color(0xFF64748B)
+        "RECHAZADO" -> Color(0xFF94A3B8)
+        else -> Color(0xFF94A3B8)
+    }
+
+    Card(
+        modifier = Modifier
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .fillMaxWidth()
+            .clickable(onClick = onToggle),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(prestamo.folio ?: "MSP-${prestamo.idPrestamo}", fontWeight = FontWeight.Black)
+                Surface(color = estadoColor, shape = RoundedCornerShape(20.dp)) {
+                    Text(estado, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
-                "atrasado" -> {
-                    // Atrasado también puede pagar
-                    if (enProceso) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFFEF4444))
-                    } else {
-                        Button(
-                            onClick  = onPagar,
-                            colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                            shape    = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.height(28.dp)
-                        ) {
-                            Text("PAGAR", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        }
-                    }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("Monto solicitado: $${String.format("%,.0f", prestamo.montoTotal)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            LinearProgressIndicator(progress = { progreso.toFloat() }, modifier = Modifier.fillMaxWidth().height(8.dp), color = Color(0xFF10B981), trackColor = Color(0xFFE2E8F0))
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Pagado: $${String.format("%,.0f", pagado)}", fontSize = 12.sp)
+                Text("Pendiente: $${String.format("%,.0f", pendiente)}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            if (isExpanded) {
+                Spacer(Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                    TableHeaderText("NO.", Modifier.width(30.dp))
+                    TableHeaderText("FECHA", Modifier.weight(1f))
+                    TableHeaderText("MONTO", Modifier.weight(1f))
+                    TableHeaderText("ESTADO", Modifier.width(90.dp), TextAlign.End)
                 }
-                else -> {
-                    // pendiente
-                    if (enProceso) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    } else {
-                        Button(
-                            onClick  = onPagar,
-                            colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A)),
-                            shape    = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.height(28.dp)
-                        ) {
-                            Text("PAGAR", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        }
-                    }
+                prestamoConPagos.pagos.forEach { pago ->
+                    PagoRowPrototipo(
+                        pago = pago,
+                        mostrarBotonPagar = estado in setOf("ACTIVO", "MORA", "MOROSO")
+                    )
+                }
+                if (prestamoConPagos.pagos.isEmpty()) {
+                    Text(
+                        text = "No hay calendario disponible para este préstamo.",
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        color = Color(0xFF64748B),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
@@ -216,7 +180,14 @@ fun PagoRowCliente(
 
 @Composable
 private fun TableHeaderText(text: String, modifier: Modifier, align: TextAlign = TextAlign.Start) {
-    Text(text = text, modifier = modifier, fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF94A3B8), textAlign = align)
+    Text(
+        text = text,
+        modifier = modifier,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Black,
+        color = Color(0xFF94A3B8),
+        textAlign = align
+    )
 }
 
 @Composable
@@ -261,18 +232,38 @@ fun HeaderCredito(folio: String) {
 
 // PagoRowPrototipo se mantiene igual para que no rompa referencias desde supervision
 @Composable
-fun PagoRowPrototipo(pago: PagoData) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+fun PagoRowPrototipo(pago: PagoData, mostrarBotonPagar: Boolean = false) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(pago.numeroPago.toString(), modifier = Modifier.width(30.dp), fontSize = 12.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
-        Text(pago.fechaVencimiento ?: "", modifier = Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Black)
+        Text(pago.fechaVencimiento, modifier = Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Black)
         Text("$${String.format("%,.0f", pago.monto)}", modifier = Modifier.weight(1f), fontSize = 12.sp, fontWeight = FontWeight.Black)
+
         val (statusColor, label) = when (pago.estado.lowercase()) {
-            "pagado"   -> Color(0xFF10B981) to "PAGADO"
+            "pagado" -> Color(0xFF10B981) to "PAGADO"
             "atrasado" -> Color(0xFFEF4444) to "ATRASADO"
             else       -> Color(0xFF64748B) to "PENDIENTE"
         }
-        Surface(color = statusColor, shape = RoundedCornerShape(8.dp)) {
-            Text(label, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Black)
+
+        if (mostrarBotonPagar && !pago.estado.equals("pagado", ignoreCase = true)) {
+            OutlinedButton(
+                onClick = { },
+                modifier = Modifier.height(28.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("PAGAR", fontSize = 8.sp, fontWeight = FontWeight.Black)
+            }
+        } else {
+            Surface(color = statusColor, shape = RoundedCornerShape(8.dp)) {
+                Text(
+                    label,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Black
+                )
+            }
         }
     }
     HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFF1F5F9))
