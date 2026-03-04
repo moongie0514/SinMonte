@@ -49,6 +49,7 @@ data class CarteraUiState(
     val mesesTotales: Int = 0,
     val prestamosConPagos: List<PrestamoConPagos> = emptyList(),
     val pagos: List<PagoData> = emptyList(),
+    // Suma de pagos "pagado" de TODOS los préstamos vigentes (ACTIVO/MORA/MOROSO)
     val montoLiquidado: Double = 0.0,
     val saldoPendiente: Double = 0.0,
     val mensajeAviso: String? = null,
