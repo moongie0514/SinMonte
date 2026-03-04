@@ -61,11 +61,14 @@ class ConfigAdminViewModel @Inject constructor(
                         isLoading = false
                     )
                 } else {
-                    Log.e("CONFIG_VM", "Error al cargar: ${response.code()}")
+                    val errorBody = try {
+                        response.errorBody()?.string()
+                    } catch (e: Exception) { null }
+                    Log.e("CONFIG_VM", "Error al cargar: ${response.code()} — $errorBody")
                     uiState = uiState.copy(
                         isLoading = false,
-                        mensaje = "Error: ${response.code()}",
-                        esError = true
+                        mensaje   = "Error: ${response.code()}",
+                        esError   = true
                     )
                 }
             } catch (e: Exception) {

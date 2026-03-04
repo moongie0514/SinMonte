@@ -51,6 +51,11 @@ interface ApiService {
         @Path("id_prestamo")  idPrestamo: Int
      ): Response<List<PagoData>>
 
+    @POST("cliente/registrar_pago")
+    suspend fun registrarPagoCliente(
+        @Body request: RegistrarPagoClienteRequest
+    ): Response<GenericResponse>
+
     // 9. Solicitar nuevo crédito
     @POST("cliente/solicitar_credito")
     suspend fun solicitarCredito(

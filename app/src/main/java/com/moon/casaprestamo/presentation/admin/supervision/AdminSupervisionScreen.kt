@@ -22,11 +22,12 @@ fun AdminSupervisionScreen(
         onCargarFolios       = viewModel::cargarFolios,
         onAbrirEstadoCuenta  = viewModel::abrirEstadoCuenta,
         onCerrarEstadoCuenta = viewModel::cerrarEstadoCuenta,
+        onAbrirTicketPago    = viewModel::abrirTicketPago,   // ← nuevo
+        onCerrarTicketPago   = viewModel::cerrarTicketPago,  // ← nuevo
         onAbrirSolicitud     = viewModel::abrirDetalleSolicitud,
         onCerrarSolicitud    = viewModel::cerrarDetalleSolicitud,
-        onAprobar            = { id -> viewModel.aprobarPrestamo(id, idAprobador) },
-        onRechazar           = { id -> viewModel.rechazarPrestamo(id, idAprobador) },
-        onLimpiarMensaje     = viewModel::limpiarMensaje,
-        modifier             = modifier
+        onAprobar  = { idPrestamo -> viewModel.aprobarPrestamo(idPrestamo, idAprobador) },
+        onRechazar = { idPrestamo -> viewModel.rechazarPrestamo(idPrestamo, idAprobador) },
+        onLimpiarMensaje     = viewModel::limpiarMensaje
     )
 }

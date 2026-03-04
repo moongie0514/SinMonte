@@ -6,8 +6,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.moon.casaprestamo.presentation.empleado.*
 import com.moon.casaprestamo.presentation.empleado.cobranza.EmpleadoCobranzaScreen
+import com.moon.casaprestamo.presentation.empleado.cuentas.EmpleadoClientesContent
+import com.moon.casaprestamo.presentation.empleado.supervision.EmpleadoPrestamosContent
 
 @Composable
 fun EmpleadoNavGraph(

@@ -14,31 +14,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.*
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.moon.casaprestamo.data.models.LoginResult
-import com.moon.casaprestamo.data.models.LoginUiState
-import com.moon.casaprestamo.data.models.Usuario
+import com.moon.casaprestamo.data.models.*
 import com.moon.casaprestamo.ui.components.inputs.MonteInput
-import com.moon.casaprestamo.ui.theme.CasaPrestamoTheme
 
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
-    onLoginSuccess: (Usuario) -> Unit,           // ✅ Usuario en lugar de UserData
-    onNavigateToRegister: () -> Unit,
-    onNavigateToForgot: () -> Unit
+    onLoginSuccess:           (Usuario) -> Unit,
+    onNavigateToRegister:     () -> Unit,
+    onNavigateToForgot:       () -> Unit,
+    // ── NUEVO: navega a VerificarEmailScreen con el email precargado ──────────
+    onRequiereVerificacion:   (email: String) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val uiState           by viewModel.uiState.collectAsState()
+    val snackbarHostState  = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.loginResult) {
         when (val result = uiState.loginResult) {
             is LoginResult.Success -> {
-                onLoginSuccess(result.usuario)   // ✅ result.usuario en lugar de result.userData
+                onLoginSuccess(result.usuario)
+            }
+            is LoginResult.RequiereVerificacion -> {
+                // En lugar de mostrar el error, navegamos a la pantalla de verificación
+                // El email ya viene precargado para que el usuario solo ingrese el código
+                viewModel.onEvent(LoginEvent.DismissError)
+                onRequiereVerificacion(result.email)
             }
             is LoginResult.Error -> {
                 snackbarHostState.showSnackbar(result.message)
@@ -68,7 +71,7 @@ fun LoginScreen(
                     Icons.Filled.AccountBalance,
                     contentDescription = null,
                     modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint     = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -92,9 +95,9 @@ fun LoginScreen(
 
 @Composable
 fun LoginContentView(
-    uiState: LoginUiState,
-    onEvent: (LoginEvent) -> Unit,
-    onNavigateToForgot: () -> Unit,
+    uiState:              LoginUiState,
+    onEvent:              (LoginEvent) -> Unit,
+    onNavigateToForgot:   () -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -183,17 +186,5 @@ fun LoginContentView(
                 color    = MaterialTheme.colorScheme.primary
             )
         }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun LoginScreenPreview() {
-    CasaPrestamoTheme(darkTheme = false) {
-        LoginScreen(
-            onNavigateToRegister = {},
-            onLoginSuccess       = {},
-            onNavigateToForgot   = {}
-        )
     }
 }

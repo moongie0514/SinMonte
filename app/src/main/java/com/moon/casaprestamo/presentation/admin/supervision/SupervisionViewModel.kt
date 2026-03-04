@@ -52,6 +52,7 @@ data class SupervisionUiState(
     val estadoCuenta: TicketPrestamoDetalle? = null,
     val estadoCuentaLoading: Boolean = false,
     val solicitudDetalle: PrestamoPendienteAdmin? = null,
+    val ticketPagoAbierto: TicketDetalle? = null,
     val fechaDesde: String = "",
     val fechaHasta: String = "",
     val mensaje: String? = null,
@@ -367,6 +368,7 @@ class SupervisionViewModel @Inject constructor(
                     _uiState.update { it.copy(mensaje = msg) }
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "💥 procesarPrestamo exception: ${e.localizedMessage}")
                 _uiState.update { it.copy(mensaje = "Error: ${e.localizedMessage}") }
             }
         }

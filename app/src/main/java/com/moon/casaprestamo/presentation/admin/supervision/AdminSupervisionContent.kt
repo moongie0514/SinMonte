@@ -34,9 +34,11 @@ fun AdminSupervisionContent(
     }
 
     Column(
-        modifier = modifier.fillMaxSize().padding(vertical = 8.dp),
+        modifier            = modifier.fillMaxSize().padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+
+        // ── Barra superior (KPIs + selector de fechas) ────────
         BarraSuperior(
             recaudacion = if (tabEfectiva == SupervisionTab.FOLIOS) uiState.recaudacionFolios else uiState.recaudacionCartera,
             recaudacionLabel = if (tabEfectiva == SupervisionTab.FOLIOS) "FOLIOS" else "CARTERA",
@@ -83,6 +85,7 @@ fun AdminSupervisionContent(
             }
         }
 
+        // ── Toast de mensaje ──────────────────────────────────
         uiState.mensaje?.let { msg ->
             LaunchedEffect(msg) {
                 kotlinx.coroutines.delay(3000)

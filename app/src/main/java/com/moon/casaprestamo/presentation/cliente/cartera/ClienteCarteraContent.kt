@@ -28,8 +28,10 @@ import com.moon.casaprestamo.data.models.PrestamoConPagos
 
 @Composable
 fun ClienteCarteraContent(
-    uiState: CarteraUiState,
-    onRetry: () -> Unit
+    uiState:          CarteraUiState,
+    onRetry:          () -> Unit,
+    onPagar:          (idPago: Int) -> Unit,   // ← NUEVO
+    onLimpiarMensaje: () -> Unit                // ← NUEVO
 ) {
     val colorScheme = MaterialTheme.colorScheme
     var expandedPrestamoId by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -62,6 +64,7 @@ fun ClienteCarteraContent(
                     SummaryCard("PENDIENTE", "$${String.format("%,.0f", uiState.saldoPendiente)}", Icons.Default.PriorityHigh, colorScheme.primary)
                 }
             }
+            return@Scaffold
         }
 
         item {
@@ -170,7 +173,10 @@ private fun PrestamoHistorialCard(
             }
         }
     }
+    HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFF1F5F9))
 }
+
+// ── Composables auxiliares sin cambios ───────────────────────────
 
 @Composable
 private fun TableHeaderText(text: String, modifier: Modifier, align: TextAlign = TextAlign.Start) {
@@ -186,17 +192,9 @@ private fun TableHeaderText(text: String, modifier: Modifier, align: TextAlign =
 
 @Composable
 fun SummaryCard(label: String, value: String, icon: ImageVector, iconColor: Color) {
-    Surface(
-        modifier = Modifier.width(180.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
-    ) {
+    Surface(modifier = Modifier.width(180.dp), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Box(
-                modifier = Modifier.size(32.dp).background(iconColor.copy(0.1f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.size(32.dp).background(iconColor.copy(0.1f), CircleShape), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = iconColor, modifier = Modifier.size(16.dp))
             }
             Spacer(Modifier.height(12.dp))
@@ -208,12 +206,7 @@ fun SummaryCard(label: String, value: String, icon: ImageVector, iconColor: Colo
 
 @Composable
 fun SpecificCard(label: String, value: String, containerColor: Color, contentColor: Color, modifier: Modifier, isBordered: Boolean = false) {
-    Surface(
-        modifier = modifier.height(80.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = containerColor,
-        border = if (isBordered) BorderStroke(1.dp, Color(0xFFE2E8F0)) else null
-    ) {
+    Surface(modifier = modifier.height(80.dp), shape = RoundedCornerShape(16.dp), color = containerColor, border = if (isBordered) BorderStroke(1.dp, Color(0xFFE2E8F0)) else null) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.Center) {
             Text(label, fontSize = 8.sp, fontWeight = FontWeight.Black, color = contentColor.copy(0.7f))
             Text(value, fontSize = 18.sp, fontWeight = FontWeight.Black, color = contentColor)
@@ -223,35 +216,21 @@ fun SpecificCard(label: String, value: String, containerColor: Color, contentCol
 
 @Composable
 fun HeaderCredito(folio: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = Color(0xFFF8FAFC),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-            ) {
+            Surface(modifier = Modifier.size(40.dp), shape = RoundedCornerShape(10.dp), color = Color(0xFFF8FAFC), border = BorderStroke(1.dp, Color(0xFFE2E8F0))) {
                 Icon(Icons.Default.CalendarToday, null, tint = Color(0xFFA6032F), modifier = Modifier.padding(10.dp))
             }
             Spacer(Modifier.width(12.dp))
-            Column {
-                Text("FOLIO: $folio", fontWeight = FontWeight.Black, fontSize = 14.sp)
-            }
+            Column { Text("FOLIO: $folio", fontWeight = FontWeight.Black, fontSize = 14.sp) }
         }
         Surface(color = Color(0xFF10B981), shape = RoundedCornerShape(20.dp)) {
-            Text(
-                "ACTIVO",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.White
-            )
+            Text("ACTIVO", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.White)
         }
     }
 }
 
+// PagoRowPrototipo se mantiene igual para que no rompa referencias desde supervision
 @Composable
 fun PagoRowPrototipo(pago: PagoData, mostrarBotonPagar: Boolean = false) {
     Row(
@@ -265,7 +244,7 @@ fun PagoRowPrototipo(pago: PagoData, mostrarBotonPagar: Boolean = false) {
         val (statusColor, label) = when (pago.estado.lowercase()) {
             "pagado" -> Color(0xFF10B981) to "PAGADO"
             "atrasado" -> Color(0xFFEF4444) to "ATRASADO"
-            else -> Color(0xFF64748B) to "PENDIENTE"
+            else       -> Color(0xFF64748B) to "PENDIENTE"
         }
 
         if (mostrarBotonPagar && !pago.estado.equals("pagado", ignoreCase = true)) {

@@ -18,8 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 
-private val Verde  = Color(0xFF10B981)
-private val Rojo   = Color(0xFFA6032F)
 private val Oscuro = Color(0xFF0F172A)
 
 @Composable
