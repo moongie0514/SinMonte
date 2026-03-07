@@ -1,35 +1,26 @@
 package com.moon.casaprestamo.data.models
 
+import com.moon.casaprestamo.auth.TipoIdentificacion
+
 // ==================== UI STATES ====================
 
 // --- AUTH ---
-data class LoginUiState(
-    val username: String = "",
-    val password: String = "",
-    val isLoading: Boolean = false,
-    val loginResult: LoginResult? = null
-)
-
-sealed class LoginResult {
-    data class Success(val usuario: Usuario) : LoginResult()
-    data class Error(val message: String) : LoginResult()
-}
-
 data class RegistroUiState(
-    val nombre: String = "",
-    val apellidoPaterno: String = "",
-    val apellidoMaterno: String = "",
-    val curp: String = "",
-    val ine: String = "",
-    val telefono: String = "",
-    val email: String = "",
-    val direccion: String = "",
-    val fechaNacimiento: String = "",
-    val password: String = "",
-    val isLoading: Boolean = false,
-    val registroExitoso: Boolean = false,
-    val emailParaVerificar: String = "",
-    val errorMessage: String? = null
+    val nombre:             String             = "",
+    val apellidoPaterno:    String             = "",
+    val apellidoMaterno:    String             = "",   // único opcional
+    val curp:               String             = "",
+    val tipoId:             TipoIdentificacion = TipoIdentificacion.INE,  // ← nuevo
+    val numeroId:           String             = "",                       // ← nuevo (antes: ine)
+    val telefono:           String             = "",
+    val email:              String             = "",
+    val direccion:          String             = "",
+    val fechaNacimiento:    String             = "",
+    val password:           String             = "",
+    val isLoading:          Boolean            = false,
+    val registroExitoso:    Boolean            = false,
+    val emailParaVerificar: String             = "",
+    val errorMessage:       String?            = null
 )
 
 data class VerificarEmailUiState(
@@ -54,8 +45,9 @@ data class CarteraUiState(
     val saldoPendiente: Double = 0.0,
     val mensajeAviso: String? = null,
     val prestamos: List<PrestamoData> = emptyList(),
-    val pagoEnProceso: Int? = null,
-    val mensajePago: String? = null,
+    val prestamosExpandidos: Set<Int> = emptySet(),
+    val pagoEnProceso: Int?    = null,
+    val mensajePago:  String?  = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )

@@ -36,50 +36,66 @@ class ClienteCarteraViewModel @Inject constructor(
                 Log.d(TAG, "HTTP ${response.code()}")
 
                 if (response.isSuccessful) {
-                    val prestamos = response.body() ?: emptyList()
-                    val estadosVigentes = setOf("ACTIVO", "MORA", "MOROSO")
-                    val prestamosVigentes = prestamos.filter { it.estado.uppercase() in estadosVigentes }
-
-                    val pagosPorPrestamo = mutableMapOf<Int, List<PagoData>>()
-                    for (prestamo in prestamos) {
-                        try {
-                            val pagosResp = apiService.obtenerCalendarioPagos(idCliente, prestamo.idPrestamo)
-                            pagosPorPrestamo[prestamo.idPrestamo] = if (pagosResp.isSuccessful) pagosResp.body().orEmpty() else emptyList()
-                        } catch (_: Exception) {
-                            pagosPorPrestamo[prestamo.idPrestamo] = emptyList()
-                        }
+                    val prestamosOriginal = response.body() ?: emptyList()
+                    val prestamos = prestamosOriginal.filterNot {
+                        it.estado.equals("RECHAZADO", ignoreCase = true)
                     }
 
-                    val prestamosConPagos = prestamos.map { p ->
-                        PrestamoConPagos(prestamo = p, pagos = pagosPorPrestamo[p.idPrestamo].orEmpty())
+                    prestamos.forEach { p ->
+                        Log.d(TAG, "préstamo ${p.idPrestamo} estado=${p.estado} montoTotal=${p.montoTotal} saldoPendiente=${p.saldoPendiente}")
                     }
 
-                    val capitalOtorgado = prestamosVigentes.sumOf { it.montoTotal }.coerceAtLeast(0.0)
-                    val saldoPendiente = prestamosVigentes.sumOf { it.saldoPendiente }.coerceAtLeast(0.0)
-                    val montoLiquidado = prestamosConPagos
-                        .filter { it.prestamo.estado.uppercase() in estadosVigentes }
-                        .sumOf { pcp ->
-                            pcp.pagos.filter { it.estado.equals("pagado", ignoreCase = true) }.sumOf { it.monto }
+                    // Cards superiores: solo préstamos vigentes
+                    val estadosCapital  = setOf("ACTIVO", "MORA", "MOROSO", "LIQUIDADO")
+                    val estadosSaldo    = setOf("ACTIVO", "MORA", "MOROSO")
+
+                    val capitalOtorgado = prestamos
+                        .filter { it.estado.uppercase() in estadosCapital }
+                        .sumOf { it.montoTotal }.coerceAtLeast(0.0)
+
+                    val saldoPendiente = prestamos
+                        .filter { it.estado.uppercase() in estadosSaldo }
+                        .sumOf { it.saldoPendiente }.coerceAtLeast(0.0)
+
+                    val mesesTotales      = prestamos.sumOf { it.plazoMeses }
+
+                    // Ordenar: ACTIVO/MORA primero, luego LIQUIDADO, por fecha descendente
+                    val prestamosOrdenados = prestamos.sortedWith(
+                        compareBy<Any?> { p ->
+                            val prestamo = p as PrestamoData
+                            when (prestamo.estado.uppercase()) {
+                                "ACTIVO", "MORA", "MOROSO" -> 0
+                                "LIQUIDADO"                -> 1
+                                else                       -> 2
+                            }
+                        }.thenByDescending { p ->
+                            (p as PrestamoData).fechaCreacion
                         }
-                        .coerceAtLeast(0.0)
+                    )
 
-                    val mesesTotales = prestamosVigentes.sumOf { it.plazoMeses }
+                    val prestamosConPagos = prestamosOrdenados.map {
+                        PrestamoConPagos(prestamo = it, pagos = emptyList())
+                    }
 
-                    // montoLiquidado se calculará correctamente en cargarPagos
-                    // desde los pagos reales — aquí lo dejamos en 0 temporalmente
                     _uiState.update {
                         it.copy(
                             isLoading         = false,
-                            prestamos         = prestamos,
+                            prestamos         = prestamosOrdenados,
                             prestamosConPagos = prestamosConPagos,
                             capitalOtorgado   = capitalOtorgado,
                             saldoPendiente    = saldoPendiente,
                             totalRestante     = saldoPendiente,
                             saldoActual       = saldoPendiente,
-                            montoLiquidado    = 0.0,   // se actualiza en cargarPagos
+                            montoLiquidado    = 0.0, // se recalcula en cargarPagosTodos
                             mesesTotales      = mesesTotales,
+                            prestamosExpandidos = emptySet(), // resetear expansiones al recargar
                             error             = null
                         )
+                    }
+
+                    // Cargar pagos de TODOS los préstamos para tener calendarios listos
+                    prestamosOrdenados.forEach { p ->
+                        cargarPagos(idCliente, p.idPrestamo)
                     }
 
                 } else {
@@ -106,27 +122,55 @@ class ClienteCarteraViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     val pagos = response.body() ?: emptyList()
 
-                    // ✅ montoLiquidado = suma real de pagos con estado "pagado"
-                    // Correcto con intereses: no depende de montoTotal vs saldoPendiente
-                    val montoLiquidado = pagos
-                        .filter { it.estado.equals("pagado", ignoreCase = true) }
-                        .sumOf { it.monto }
-
-                    Log.d(TAG, "pagos cargados: ${pagos.size} — liquidado: $montoLiquidado")
-
                     _uiState.update { state ->
+                        val nuevosPrestamosConPagos = state.prestamosConPagos.map { pc ->
+                            if (pc.prestamo.idPrestamo == idPrestamo) pc.copy(pagos = pagos)
+                            else pc
+                        }
+
+                        // Recalcular montoLiquidado sumando todos los pagos pagados de todos los préstamos
+                        val montoLiquidadoTotal = nuevosPrestamosConPagos
+                            .flatMap { it.pagos }
+                            .filter { it.estado.equals("pagado", ignoreCase = true) }
+                            .sumOf { it.monto }
+
+                        Log.d(TAG, "pagos cargados prestamo $idPrestamo: ${pagos.size} — liquidado total: $montoLiquidadoTotal")
+
                         state.copy(
-                            prestamosConPagos = state.prestamosConPagos.map { pc ->
-                                if (pc.prestamo.idPrestamo == idPrestamo) pc.copy(pagos = pagos)
-                                else pc
-                            },
-                            montoLiquidado = montoLiquidado
+                            pagos = marcarPagable(pagos),
+                            prestamosConPagos = state.prestamosConPagos.map { pcp ->
+                                if (pcp.prestamo.idPrestamo == idPrestamo)
+                                    pcp.copy(pagos = marcarPagable(pagos))   // ← y esta
+                                 else pcp
+                             },
+                            montoLiquidado    = montoLiquidadoTotal
                         )
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "💥 Error al cargar pagos: ${e.localizedMessage}")
             }
+        }
+    }
+    private fun marcarPagable(pagos: List<PagoData>): List<PagoData> {
+        // Encuentra el índice del primer pago que NO está pagado
+        val primerPendiente = pagos.indexOfFirst { it.estado != "pagado" }
+        return pagos.mapIndexed { index, pago ->
+            pago.copy(esPagable = index == primerPendiente)
+        }
+    }
+
+
+    // Expande o colapsa la tarjeta de un préstamo — solo uno expandido a la vez
+    fun toggleExpansion(idPrestamo: Int) {
+        _uiState.update { state ->
+            val expandidos = state.prestamosExpandidos
+            state.copy(
+                prestamosExpandidos = if (expandidos.contains(idPrestamo))
+                    expandidos - idPrestamo
+                else
+                    setOf(idPrestamo) // solo uno a la vez
+            )
         }
     }
 

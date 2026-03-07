@@ -10,22 +10,24 @@ import com.moon.casaprestamo.data.models.SolicitudCreditoRequest
 import com.moon.casaprestamo.data.network.ApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import javax.inject.Inject
 
 private const val TAG = "SOLICITUD_VM"
 
-// ✅ plazoMeses es Int con opciones fijas — ya no String libre
 data class SolicitarPrestamoUiState(
-    val monto: String = "",
-    val plazoMeses: Int = 12,
-    val tasaConfigurada: Double = 5.0,
-    val montoMaximoPermitido: Double = 50000.0,
-    val montoMinimoPermitido: Double = 1000.0,
-    val cuotaEstimada: Double? = null,
-    val isLoading: Boolean = false,
-    val resultado: String? = null,
-    val error: String? = null
+    val monto:                String  = "",
+    val plazoMeses:           Int     = 12,
+    val tasaConfigurada:      Double  = 5.0,
+    val montoMaximoPermitido: Double  = 50000.0,
+    val montoMinimoPermitido: Double  = 1000.0,
+    val cuotaEstimada:        Double? = null,
+    val isLoading:            Boolean = false,
+    val resultado:            String? = null,
+    val error:                String? = null,
+    // ── Elegibilidad ─────────────────────────────────────────
+    val elegibilidadCargando: Boolean = true,   // true = mostramos spinner/bloqueo hasta saber
+    val puedeSolicitar:       Boolean = false,  // false por defecto: seguro antes de consultar
+    val motivoBloqueo:        String? = null
 )
 
 @HiltViewModel
@@ -33,125 +35,117 @@ class SolicitarPrestamoViewModel @Inject constructor(
     private val apiService: ApiService
 ) : ViewModel() {
 
-    // ✅ Plazos válidos según el API (no acepta valores distintos a estos)
     val plazosDisponibles = listOf(6, 12, 24, 36, 48)
 
     var uiState by mutableStateOf(SolicitarPrestamoUiState())
         private set
 
-    init {
-        cargarConfiguracionVigente()
-    }
-
-    private fun cargarConfiguracionVigente() {
+    // Llamar desde LaunchedEffect(Unit) Y desde LaunchedEffect(lifecycle == RESUMED)
+    fun verificarElegibilidad(idCliente: Int) {
         viewModelScope.launch {
+            // Reset a bloqueado mientras carga — nunca dejamos pasar por defecto
+            uiState = uiState.copy(elegibilidadCargando = true, puedeSolicitar = false)
             try {
-                val response = apiService.obtenerConfiguracion()
-                if (response.isSuccessful && response.body() != null) {
-                    val item = response.body()!!.configuracion.firstOrNull()
-
-                    val tasa = item?.tasaInteres ?: uiState.tasaConfigurada
-                    val min = item?.montoMinimo ?: uiState.montoMinimoPermitido
-                    val max = item?.montoMaximo ?: uiState.montoMaximoPermitido
-
-                    Log.d(TAG, "Config: tasa=$tasa min=$min max=$max")
+                val r = apiService.verificarElegibilidad(idCliente)
+                if (r.isSuccessful && r.body() != null) {
+                    val body = r.body()!!
                     uiState = uiState.copy(
-                        tasaConfigurada = tasa,
-                        montoMaximoPermitido = max,
-                        montoMinimoPermitido = min
+                        elegibilidadCargando = false,
+                        puedeSolicitar       = body.puedeSolicitar,
+                        motivoBloqueo        = body.motivo
                     )
                 } else {
-                    Log.w(TAG, "Config no disponible: HTTP ${response.code()} — usando defaults")
+                    // Error HTTP → bloqueamos por seguridad
+                    uiState = uiState.copy(elegibilidadCargando = false, puedeSolicitar = false,
+                        motivoBloqueo = "No se pudo verificar elegibilidad (HTTP ${r.code()}). Intenta más tarde.")
                 }
             } catch (e: Exception) {
-                // Mantiene valores por defecto si falla la red
-                Log.w(TAG, "No se pudo cargar configuración: ${e.localizedMessage}")
+                uiState = uiState.copy(elegibilidadCargando = false, puedeSolicitar = false,
+                    motivoBloqueo = "Sin conexión. Revisa tu internet e intenta de nuevo.")
             }
         }
     }
 
+    fun cargarConfiguracion() {
+        viewModelScope.launch {
+            try {
+                val r = apiService.obtenerConfiguracion()
+                if (r.isSuccessful) {
+                    val item = r.body()?.configuracion?.firstOrNull() ?: return@launch
+                    uiState = uiState.copy(
+                        tasaConfigurada      = item.tasaInteres,
+                        montoMinimoPermitido = item.montoMinimo,
+                        montoMaximoPermitido = item.montoMaximo
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Config no disponible: ${e.localizedMessage}")
+            }
+        }
+    }
 
     fun onMontoChange(value: String) {
         uiState = uiState.copy(monto = value, resultado = null, error = null)
-        calcularCuotaEstimada(value, uiState.plazoMeses)
+        calcularCuota(value, uiState.plazoMeses)
     }
 
-    // ✅ antes: onMesesChange(value: String) — ahora recibe Int de opciones fijas
     fun onPlazoChange(plazo: Int) {
         uiState = uiState.copy(plazoMeses = plazo, resultado = null, error = null)
-        calcularCuotaEstimada(uiState.monto, plazo)
+        calcularCuota(uiState.monto, plazo)
     }
 
-    // Cálculo local idéntico al del servidor (amortización francesa, 5% mensual fijo)
-    private fun calcularCuotaEstimada(montoStr: String, plazo: Int) {
+    private fun calcularCuota(montoStr: String, plazo: Int) {
         val monto = montoStr.toDoubleOrNull() ?: return
         if (monto <= 0 || plazo <= 0) return
-        val tasa  = 0.05
+        val tasa = uiState.tasaConfigurada
         val cuota = monto * (tasa * Math.pow(1 + tasa, plazo.toDouble())) /
                 (Math.pow(1 + tasa, plazo.toDouble()) - 1)
         uiState = uiState.copy(cuotaEstimada = cuota)
     }
 
     fun enviarSolicitud(idCliente: Int) {
-        val montoNum = uiState.monto.toDoubleOrNull() ?: 0.0
-
-        // Validaciones
-        when {
-            montoNum <= 0 -> {
-                uiState = uiState.copy(error = "❌ Ingresa un monto válido")
-                return
-            }
-            montoNum < uiState.montoMinimoPermitido -> {
-                uiState = uiState.copy(error = "❌ El monto mínimo es $${uiState.montoMinimoPermitido.toLong()}")
-                return
-            }
-            montoNum > uiState.montoMaximoPermitido -> {
-                uiState = uiState.copy(error = "❌ El monto máximo es $${uiState.montoMaximoPermitido.toLong()}")
-                return
-            }
-            uiState.plazoMeses !in plazosDisponibles -> {
-                uiState = uiState.copy(error = "❌ Selecciona un plazo válido")
-                return
-            }
+        // Segunda línea de defensa en cliente (el servidor también valida)
+        if (!uiState.puedeSolicitar) {
+            uiState = uiState.copy(error = "❌ ${uiState.motivoBloqueo ?: "No puedes solicitar un préstamo ahora"}")
+            return
         }
-
+        val montoNum = uiState.monto.toDoubleOrNull() ?: 0.0
+        when {
+            montoNum <= 0 ->
+            { uiState = uiState.copy(error = "❌ Ingresa un monto válido"); return }
+            montoNum < uiState.montoMinimoPermitido ->
+            { uiState = uiState.copy(error = "❌ El monto mínimo es $${uiState.montoMinimoPermitido.toLong()}"); return }
+            montoNum > uiState.montoMaximoPermitido ->
+            { uiState = uiState.copy(error = "❌ El monto máximo es $${uiState.montoMaximoPermitido.toLong()}"); return }
+            uiState.plazoMeses !in plazosDisponibles ->
+            { uiState = uiState.copy(error = "❌ Selecciona un plazo válido"); return }
+        }
         viewModelScope.launch {
-            uiState = uiState.copy(isLoading = true, resultado = null, error = null)
+            uiState = uiState.copy(isLoading = true, error = null, resultado = null)
             try {
-                // ✅ SolicitudCreditoRequest con plazo_meses (no meses)
-                // ✅ apiService.solicitarCredito (no solicitarPrestamo)
-                val request = SolicitudCreditoRequest(
-                    id_cliente  = idCliente,
-                    monto       = montoNum,
-                    plazo_meses = uiState.plazoMeses
+                val response = apiService.solicitarCredito(
+                    SolicitudCreditoRequest(
+                        id_cliente  = idCliente,
+                        monto      = montoNum,
+                        plazo_meses = uiState.plazoMeses
+                    )
                 )
-
-                Log.d(TAG, "POST /cliente/solicitar_credito → monto: $montoNum, plazo: ${uiState.plazoMeses}")
-                val response = apiService.solicitarCredito(request)
-                Log.d(TAG, "HTTP ${response.code()}")
-
-                if (response.isSuccessful && response.body()?.status == "success") {
+                if (response.isSuccessful) {
                     uiState = uiState.copy(
                         isLoading     = false,
-                        resultado     = "✅ SOLICITUD ENVIADA — Un empleado la revisará pronto.",
+                        resultado     = "✅ Solicitud enviada. Un empleado la revisará pronto.",
                         monto         = "",
-                        plazoMeses    = 12,
-                        cuotaEstimada = null
+                        cuotaEstimada = null,
+                        puedeSolicitar = false  // Bloquear de inmediato tras enviar
                     )
                 } else {
-                    val errorMsg = try {
-                        JSONObject(response.errorBody()?.string() ?: "").optString("detail", "Error al enviar solicitud")
-                    } catch (e: Exception) { "Error al enviar solicitud" }
-
-                    Log.e(TAG, "❌ $errorMsg")
-                    uiState = uiState.copy(isLoading = false, error = "❌ $errorMsg")
+                    val detail = runCatching {
+                        org.json.JSONObject(response.errorBody()?.string() ?: "").getString("detail")
+                    }.getOrDefault("Error al enviar solicitud")
+                    uiState = uiState.copy(isLoading = false, error = "❌ $detail")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "💥 Error de red", e)
-                uiState = uiState.copy(
-                    isLoading = false,
-                    error     = "⚠️ ERROR DE RED: ${e.localizedMessage}"
-                )
+                uiState = uiState.copy(isLoading = false, error = "❌ ${e.localizedMessage}")
             }
         }
     }

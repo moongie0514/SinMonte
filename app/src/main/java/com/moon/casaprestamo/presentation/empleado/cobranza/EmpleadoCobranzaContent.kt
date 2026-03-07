@@ -1,5 +1,10 @@
 package com.moon.casaprestamo.presentation.empleado.cobranza
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,84 +20,110 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.moon.casaprestamo.data.models.PagoData
 import com.moon.casaprestamo.data.models.PagoPendiente
+import com.moon.casaprestamo.presentation.cliente.cartera.PagoRowCliente
 
-private val Rojo = Color(0xFFA6032F)
-private val Oscuro = Color(0xFF0F172A)
+private val Rojo  = Color(0xFFA6032F)
 private val Verde = Color(0xFF10B981)
-private val Amarillo = Color(0xFFF59E0B)
+private val Oscuro = Color(0xFF0F172A)
 
 @Composable
 fun EmpleadoCobranzaContent(
-    uiState: CobranzaUiState,
-    idEmpleado: Int,
-    onRegistrarPago: (Int, Int, String) -> Unit,
-    onLiquidarTodo: (Int, Int, String) -> Unit,   // ✅ PUNTO 3: nuevo callback
+    uiState:          CobranzaUiState,
+    idEmpleado:       Int,
+    onRegistrarPago:  (Int, Int, String) -> Unit,
+    onLiquidarTodo:   (Int, Int, String) -> Unit,
     onLimpiarMensaje: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier:         Modifier = Modifier
 ) {
-    var pagoSeleccionado by remember { mutableStateOf<PagoPendiente?>(null) }
-    var prestamoALiquidar by remember { mutableStateOf<PagoPendiente?>(null) }  // ✅ PUNTO 3
-    var metodoPago by remember { mutableStateOf("EFECTIVO") }
-    var filtroCliente by remember { mutableStateOf("") }
+    var prestamoExpandido  by remember { mutableStateOf<Int?>(null) }
+    var pagoSeleccionado   by remember { mutableStateOf<PagoPendiente?>(null) }
+    var prestamoALiquidar  by remember { mutableStateOf<PagoPendiente?>(null) }
+    var metodoPago         by remember { mutableStateOf("EFECTIVO") }
+    var query              by remember { mutableStateOf("") }
 
-    val pagosFiltrados = uiState.pagosPendientes.filter {
-        filtroCliente.isBlank() || it.nombreClienteUi.contains(filtroCliente, ignoreCase = true)
+    // Agrupar pagos por préstamo para mostrar una fila por préstamo en la tabla
+    val prestamosFiltrados = remember(uiState.pagosPendientes, query) {
+        uiState.pagosPendientes
+            .groupBy { it.id_prestamo }
+            .values
+            .map { it.first() } // representante de cada préstamo
+            .filter {
+                query.isBlank() ||
+                        it.nombreClienteUi.contains(query, ignoreCase = true) ||
+                        it.folio.orEmpty().contains(query, ignoreCase = true) ||
+                        it.curp.orEmpty().contains(query, ignoreCase = true)
+            }
     }
 
-    fun totalPendientePrestamo(idPrestamo: Int): Double =
-        uiState.pagosPendientes
-            .filter { it.id_prestamo == idPrestamo }
-            .sumOf { it.monto }
+    fun pagosDelPrestamo(idPrestamo: Int) =
+        uiState.pagosPendientes.filter { it.id_prestamo == idPrestamo }.sortedBy { it.numero_pago }
+
+    fun totalPendiente(idPrestamo: Int) =
+        uiState.pagosPendientes.filter { it.id_prestamo == idPrestamo }.sumOf { it.monto }
+
+    // ── Dialogs ──────────────────────────────────────────────────
+    if (pagoSeleccionado != null) {
+        ConfirmarPagoDialog(
+            pago           = pagoSeleccionado!!,
+            metodoPago     = metodoPago,
+            onMetodoChange = { metodoPago = it },
+            onConfirmar    = {
+                onRegistrarPago(pagoSeleccionado!!.id_pago, idEmpleado, metodoPago)
+                pagoSeleccionado = null
+            },
+            onDismiss = { pagoSeleccionado = null }
+        )
+    }
+
+    if (prestamoALiquidar != null) {
+        ConfirmarLiquidacionDialog(
+            pago           = prestamoALiquidar!!,
+            totalPendiente = totalPendiente(prestamoALiquidar!!.id_prestamo),
+            metodoPago     = metodoPago,
+            onMetodoChange = { metodoPago = it },
+            onConfirmar    = {
+                onLiquidarTodo(prestamoALiquidar!!.id_prestamo, idEmpleado, metodoPago)
+                prestamoALiquidar = null
+            },
+            onDismiss = { prestamoALiquidar = null }
+        )
+    }
 
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier            = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // ── Encabezado ───────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment     = Alignment.CenterVertically
         ) {
             Column {
                 Text(
-                    "COBRANZA",
+                    "PAGOS PENDIENTES",
                     style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Black,
+                        fontWeight    = FontWeight.Black,
                         letterSpacing = 1.5.sp
                     ),
                     color = MaterialTheme.colorScheme.outline
                 )
                 Spacer(Modifier.height(2.dp))
-                Text(
-                    "Pagos Pendientes",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Black
-                    )
-                )
             }
-
-            if (pagosFiltrados.isNotEmpty()) {
-                Surface(
-                    color = Verde.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
+            if (prestamosFiltrados.isNotEmpty()) {
+                Surface(color = Verde.copy(alpha = 0.1f), shape = RoundedCornerShape(16.dp)) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier              = Modifier.padding( vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment     = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.Payments,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = Verde
-                        )
+                        Icon(Icons.Default.Payments, null, Modifier.size(16.dp), tint = Verde)
                         Text(
-                            "${pagosFiltrados.size} PAGOS",
+                            "${prestamosFiltrados.size} CRÉDITOS",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Black,
-                                fontSize = 10.sp
+                                fontWeight = FontWeight.Black, fontSize = 10.sp
                             ),
                             color = Verde
                         )
@@ -101,22 +132,40 @@ fun EmpleadoCobranzaContent(
             }
         }
 
+        // ── Mensaje resultado ────────────────────────────────────
+        uiState.mensaje?.let { msg ->
+            LaunchedEffect(msg) {
+                kotlinx.coroutines.delay(3000)
+                onLimpiarMensaje()
+            }
+            Surface(
+                color    = if (msg.contains("✅")) Verde.copy(alpha = 0.12f) else Rojo.copy(alpha = 0.12f),
+                shape    = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+            ) {
+                Text(
+                    msg,
+                    modifier   = Modifier.padding(12.dp),
+                    color      = if (msg.contains("✅")) Verde else Rojo,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Rojo)
             }
-        } else if (pagosFiltrados.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            return@Column
+        }
+
+        if (prestamosFiltrados.isEmpty() && query.isBlank()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(72.dp),
-                        tint = Verde.copy(alpha = 0.3f)
-                    )
+                    Icon(Icons.Default.CheckCircle, null, Modifier.size(72.dp), tint = Verde.copy(alpha = 0.3f))
                     Text(
                         "No hay pagos pendientes",
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
@@ -124,247 +173,279 @@ fun EmpleadoCobranzaContent(
                     )
                 }
             }
-        } else {
-            OutlinedTextField(
-                value = filtroCliente,
-                onValueChange = { filtroCliente = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                singleLine = true,
-                label = { Text("Filtrar por cliente") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
-            )
-
-            // ✅ PUNTO 3: agrupamos por préstamo para saber cuántos pagos pendientes tiene cada uno
-            val pagosPorPrestamo = pagosFiltrados.groupBy { it.id_prestamo }
-
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(pagosFiltrados.take(200)) { pago ->
-                    val totalPendientesDelPrestamo = pagosPorPrestamo[pago.id_prestamo]?.size ?: 1
-                    PagoCard(
-                        pago = pago,
-                        totalPendiente = totalPendientePrestamo(pago.id_prestamo),
-                        mostrarLiquidarTodo = totalPendientesDelPrestamo > 1,  // ✅ PUNTO 3
-                        onSeleccionar = { pagoSeleccionado = pago },
-                        onLiquidarTodo = { prestamoALiquidar = pago }          // ✅ PUNTO 3
-                    )
-                }
-            }
+            return@Column
         }
 
-        uiState.mensaje?.let { mensaje ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (mensaje.contains("✅")) Color(0xFFD1FAE5) else Color(0xFFFEE2E2)
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        if (mensaje.contains("✅")) Icons.Default.CheckCircle else Icons.Default.Close,
-                        contentDescription = null,
-                        tint = if (mensaje.contains("✅")) Verde else Rojo
+        // ── Tabla ────────────────────────────────────────────────
+        Card(
+            shape     = RoundedCornerShape(24.dp),
+            colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(2.dp),
+            modifier  = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+
+                // Buscador
+                OutlinedTextField(
+                    value         = query,
+                    onValueChange = { query = it },
+                    placeholder   = { Text("Buscar por CURP o Folio de préstamo…", fontSize = 13.sp) },
+                    leadingIcon   = { Icon(Icons.Default.Search, null, Modifier.size(18.dp)) },
+                    modifier      = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    singleLine    = true,
+                    shape         = RoundedCornerShape(50),
+                    colors        = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        focusedContainerColor   = MaterialTheme.colorScheme.surfaceContainerLow,
+                        unfocusedBorderColor    = Color.Transparent,
+                        focusedBorderColor      = Rojo
                     )
-                    Column(modifier = Modifier.weight(1f)) {
+                )
+
+                // Encabezado de columnas
+                CobranzaTableHeader()
+                HorizontalDivider()
+
+                if (prestamosFiltrados.isEmpty()) {
+                    Box(
+                        modifier         = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            mensaje,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = if (mensaje.contains("✅")) Verde else Rojo
+                            "Sin resultados para \"$query\"",
+                            color = MaterialTheme.colorScheme.outline,
+                            style = MaterialTheme.typography.bodySmall
                         )
-                        uiState.ultimoFolio?.let { folio ->
-                            Text(
-                                "Folio: $folio",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
+                    }
+                } else {
+                    LazyColumn(contentPadding = PaddingValues(bottom = 8.dp)) {
+                        items(prestamosFiltrados, key = { it.id_prestamo }) { pago ->
+                            val expandido = prestamoExpandido == pago.id_prestamo
+                            val pagos     = pagosDelPrestamo(pago.id_prestamo)
+
+                            // ── Fila de la tabla ──────────────────
+                            CobranzaTableRow(
+                                pago      = pago,
+                                expandido = expandido,
+                                onClick   = {
+                                    prestamoExpandido = if (expandido) null else pago.id_prestamo
+                                }
+                            )
+
+                            // ── Panel expandido con cabecera + calendario ──
+                            AnimatedVisibility(
+                                visible = expandido,
+                                enter   = expandVertically(),
+                                exit    = shrinkVertically()
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                ) {
+                                    // Cabecera tipo imagen: CAJA DE COBRANZA + selector método
+                                    PanelCabeceraCobranza(
+                                        nombreCliente = pago.nombreClienteUi,
+                                        metodoPago    = metodoPago,
+                                        onMetodoChange = { metodoPago = it }
+                                    )
+
+                                    // Encabezado tabla de pagos
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    ) {
+                                        Text("NO.",   Modifier.width(30.dp),  fontSize = 9.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline)
+                                        Text("FECHA", Modifier.weight(1f),    fontSize = 9.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline)
+                                        Text("MONTO", Modifier.weight(1f),    fontSize = 9.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline)
+                                        Text("",      Modifier.width(80.dp),  fontSize = 9.sp)
+                                    }
+
+                                    // Filas de pagos
+                                    pagos.forEach { p ->
+                                        // Convertir PagoPendiente → PagoData para reutilizar PagoRowCliente
+                                        val pagoData = PagoData(
+                                            idPago = p.id_pago,
+                                            numeroPago = p.numero_pago,
+                                            fechaVencimiento = p.fecha_vencimiento.take(10),
+                                            fechaPago = null,
+                                            monto = p.monto,
+                                            estado = p.estado ?: "pendiente"                                        )
+                                        PagoRowCliente(
+                                            pago       = pagoData,
+                                            enProceso  = false,
+                                            puedePagar = true,
+                                            onPagar    = { pagoSeleccionado = p },
+                                            modifier   = Modifier.padding(horizontal = 16.dp)
+                                        )
+                                    }
+
+                                    // Botón liquidar todo
+                                    if (pagos.size > 1) {
+                                        Button(
+                                            onClick  = { prestamoALiquidar = pago },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                                .height(44.dp),
+                                            shape  = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Oscuro)
+                                        ) {
+                                            Icon(Icons.Default.Done, null, Modifier.size(16.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                "LIQUIDAR TODO (${pagos.size} pagos)",
+                                                fontWeight = FontWeight.Black,
+                                                fontSize   = 12.sp
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(8.dp))
+                                }
+                            }
+
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color     = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                             )
                         }
                     }
-                    IconButton(onClick = onLimpiarMensaje) {
-                        Icon(Icons.Default.Close, contentDescription = null)
-                    }
                 }
             }
         }
     }
-
-    // Dialog pago individual
-    if (pagoSeleccionado != null) {
-        ConfirmarPagoDialog(
-            pago = pagoSeleccionado!!,
-            metodoPago = metodoPago,
-            onMetodoChange = { metodoPago = it },
-            onConfirmar = {
-                onRegistrarPago(pagoSeleccionado!!.id_pago, idEmpleado, metodoPago)
-                pagoSeleccionado = null
-            },
-            onDismiss = { pagoSeleccionado = null }
-        )
-    }
-
-    // ✅ PUNTO 3: Dialog liquidación total
-    if (prestamoALiquidar != null) {
-        ConfirmarLiquidacionDialog(
-            pago = prestamoALiquidar!!,
-            totalPendiente = totalPendientePrestamo(prestamoALiquidar!!.id_prestamo),
-            metodoPago = metodoPago,
-            onMetodoChange = { metodoPago = it },
-            onConfirmar = {
-                onLiquidarTodo(prestamoALiquidar!!.id_prestamo, idEmpleado, metodoPago)
-                prestamoALiquidar = null
-            },
-            onDismiss = { prestamoALiquidar = null }
-        )
-    }
 }
 
+// ── Encabezado de columnas de la tabla ───────────────────────────
 @Composable
-private fun PagoCard(
-    pago: PagoPendiente,
-    totalPendiente: Double,
-    mostrarLiquidarTodo: Boolean,      // ✅ PUNTO 3
-    onSeleccionar: () -> Unit,
-    onLiquidarTodo: () -> Unit         // ✅ PUNTO 3
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+private fun CobranzaTableHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        pago.nombreClienteUi.uppercase(),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Préstamo #${pago.id_prestamo}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-                Surface(
-                    color = Verde.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        "PAGO #${pago.numero_pago}",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Black,
-                            fontSize = 9.sp
-                        ),
-                        color = Verde
-                    )
-                }
-            }
+        Text("CLIENTE",      Modifier.weight(1.6f), fontSize = 10.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline)
+        Text("PRÉSTAMO",     Modifier.weight(0.9f), fontSize = 10.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline)
+        Text("MENSUALIDAD",  Modifier.weight(0.9f), fontSize = 10.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline)
+        Text("ESTATUS",      Modifier.weight(0.8f), fontSize = 10.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline)
+    }
+}
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+// ── Fila de la tabla ─────────────────────────────────────────────
+@Composable
+private fun CobranzaTableRow(
+    pago:      PagoPendiente,
+    expandido: Boolean,
+    onClick:   () -> Unit
+) {
+    val (estadoColor, estadoLabel) = when (pago.estadoPrestamo?.uppercase()) {
+        "MOROSO" -> Color(0xFFEF4444) to "MOROSO"
+        else     -> Verde             to "ACTIVO"
+    }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        "MONTO CUOTA",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Black, fontSize = 9.sp
-                        ),
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        "$${String.format("%,.2f", pago.monto)}",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Black,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        "SALDO TOTAL",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Black, fontSize = 9.sp
-                        ),
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-"$${String.format("%,.2f", totalPendiente)}",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Rojo
-                    )
-                }
-            }
-
-            Text(
-                "Vence: ${pago.fecha_vencimiento}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .background(
+                if (expandido) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                else Color.Transparent
             )
-
-            // Botón pago individual
-            Button(
-                onClick = onSeleccionar,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Oscuro)
-            ) {
-                Icon(Icons.Default.Payments, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "REGISTRAR PAGO",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black)
-                )
-            }
-
-            // ✅ PUNTO 3: botón liquidar todo — solo si hay más de 1 pago pendiente en el préstamo
-            if (mostrarLiquidarTodo) {
-                OutlinedButton(
-                    onClick = onLiquidarTodo,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Amarillo),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Amarillo)
-                ) {
-                    Icon(Icons.Default.Bolt, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-"LIQUIDAR TODO ($${String.format("%,.2f", totalPendiente)})",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black)
-                    )
-                }
-            }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // CLIENTE
+        Column(modifier = Modifier.weight(1.6f)) {
+            val partes = pago.nombreClienteUi.split(" ")
+            Text(partes.take(2).joinToString(" "), fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
+            if (partes.size > 2)
+                Text(partes.drop(2).joinToString(" "), fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
+            Text(
+                pago.curp.orEmpty(),
+                fontSize     = 9.sp,
+                color        = MaterialTheme.colorScheme.outline,
+                fontFamily   = FontFamily.Monospace,
+                fontWeight   = FontWeight.Bold
+            )
+        }
+        // PRÉSTAMO
+        pago.folio?.let {
+            Text(
+                it,
+                modifier     = Modifier.weight(0.9f),
+                fontSize     = 11.sp,
+                fontWeight   = FontWeight.Bold,
+                color        = Rojo,
+                fontFamily   = FontFamily.Monospace
+            )
+        }
+        // MENSUALIDAD
+        Text(
+            "$${String.format("%,.0f", pago.monto)}",
+            modifier   = Modifier.weight(0.9f),
+            fontSize   = 11.sp,
+            fontWeight = FontWeight.Black
+        )
+        // ESTATUS
+        Surface(color = estadoColor.copy(alpha = 0.12f), shape = RoundedCornerShape(8.dp)) {
+            Text(
+                estadoLabel,
+                modifier   = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                fontSize   = 8.sp,
+                fontWeight = FontWeight.Black,
+                color      = estadoColor
+            )
         }
     }
 }
 
+// ── Cabecera del panel expandido (imagen de referencia) ──────────
 @Composable
-private fun ConfirmarPagoDialog(
-    pago: PagoPendiente,
-    metodoPago: String,
+private fun PanelCabeceraCobranza(
+    nombreCliente:  String,
+    metodoPago:     String,
+    onMetodoChange: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Oscuro)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment     = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                "CAJA DE\nCOBRANZA",
+                style      = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                color      = Color.White,
+                lineHeight = 22.sp
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                nombreCliente.uppercase(),
+                fontSize   = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color      = Rojo
+            )
+        }
+    }
+}
+private val Amarillo = Color(0xFFF59E0B)
+
+// ── Dialog: confirmar pago de una mensualidad ─────────────────────
+@Composable
+fun ConfirmarPagoDialog(
+    pago:           PagoPendiente,
+    metodoPago:     String,
     onMetodoChange: (String) -> Unit,
-    onConfirmar: () -> Unit,
-    onDismiss: () -> Unit
+    onConfirmar:    () -> Unit,
+    onDismiss:      () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -386,14 +467,17 @@ private fun ConfirmarPagoDialog(
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
                     color = MaterialTheme.colorScheme.outline
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("EFECTIVO", "TRANSFERENCIA", "TARJETA").forEach { metodo ->
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("EFECTIVO", "PAYPAL").forEach { metodo ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier          = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(selected = metodoPago == metodo, onClick = { onMetodoChange(metodo) })
-                            Text(metodo)
+                            RadioButton(
+                                selected = metodoPago == metodo,
+                                onClick  = { onMetodoChange(metodo) }
+                            )
+                            Text(metodo, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -402,8 +486,8 @@ private fun ConfirmarPagoDialog(
         confirmButton = {
             Button(
                 onClick = onConfirmar,
-                colors = ButtonDefaults.buttonColors(containerColor = Verde)
-            ) { Text("CONFIRMAR") }
+                colors  = ButtonDefaults.buttonColors(containerColor = Verde)
+            ) { Text("CONFIRMAR", fontWeight = FontWeight.Black) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("CANCELAR") }
@@ -411,15 +495,15 @@ private fun ConfirmarPagoDialog(
     )
 }
 
-// ✅ PUNTO 3: Dialog para liquidación total — muestra el saldo completo
+// ── Dialog: confirmar liquidación total del préstamo ──────────────
 @Composable
-private fun ConfirmarLiquidacionDialog(
-    pago: PagoPendiente,
+fun ConfirmarLiquidacionDialog(
+    pago:           PagoPendiente,
     totalPendiente: Double,
-    metodoPago: String,
+    metodoPago:     String,
     onMetodoChange: (String) -> Unit,
-    onConfirmar: () -> Unit,
-    onDismiss: () -> Unit
+    onConfirmar:    () -> Unit,
+    onDismiss:      () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -431,43 +515,52 @@ private fun ConfirmarLiquidacionDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                // Advertencia
                 Surface(
                     color = Amarillo.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier              = Modifier.padding(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.Info, contentDescription = null, tint = Amarillo)
                         Text(
-                            "Se registrarán todos los pagos pendientes del préstamo #${pago.id_prestamo}",
+                            "Se registrarán todos los pagos pendientes del préstamo ${pago.folio}",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
+
                 Text("Cliente: ${pago.nombreClienteUi}", style = MaterialTheme.typography.bodyMedium)
+
                 Text(
-"Saldo total a liquidar: $${String.format("%,.2f", totalPendiente)}",
+                    "Saldo total a liquidar: $${String.format("%,.2f", totalPendiente)}",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Black,
-                        color = Amarillo
+                        color      = Amarillo
                     )
                 )
+
                 Text(
                     "MÉTODO DE PAGO:",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
                     color = MaterialTheme.colorScheme.outline
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("EFECTIVO", "TRANSFERENCIA", "TARJETA").forEach { metodo ->
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("EFECTIVO", "PAYPAL").forEach { metodo ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier          = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(selected = metodoPago == metodo, onClick = { onMetodoChange(metodo) })
-                            Text(metodo)
+                            RadioButton(
+                                selected = metodoPago == metodo,
+                                onClick  = { onMetodoChange(metodo) }
+                            )
+                            Text(metodo, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -476,8 +569,8 @@ private fun ConfirmarLiquidacionDialog(
         confirmButton = {
             Button(
                 onClick = onConfirmar,
-                colors = ButtonDefaults.buttonColors(containerColor = Amarillo)
-            ) { Text("LIQUIDAR TODO", color = Color.White) }
+                colors  = ButtonDefaults.buttonColors(containerColor = Amarillo)
+            ) { Text("LIQUIDAR TODO", fontWeight = FontWeight.Black, color = Color.White) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("CANCELAR") }

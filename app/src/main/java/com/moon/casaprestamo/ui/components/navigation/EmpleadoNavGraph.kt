@@ -7,8 +7,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.moon.casaprestamo.presentation.empleado.cobranza.EmpleadoCobranzaScreen
-import com.moon.casaprestamo.presentation.empleado.cuentas.EmpleadoClientesContent
-import com.moon.casaprestamo.presentation.empleado.supervision.EmpleadoPrestamosContent
+import com.moon.casaprestamo.presentation.empleado.cuentas.EmpleadoCuentasScreen
+import com.moon.casaprestamo.presentation.empleado.supervision.EmpleadoSupervisionScreen
 
 @Composable
 fun EmpleadoNavGraph(
@@ -24,10 +24,10 @@ fun EmpleadoNavGraph(
             EmpleadoCobranzaScreen(idEmpleado = idEmpleado)
         }
         composable(Routes.EMPLEADO_CLIENTES) {
-            EmpleadoClientesContent()
+            EmpleadoCuentasScreen()
         }
         composable(Routes.EMPLEADO_PRESTAMOS) {
-            EmpleadoPrestamosContent()
+            EmpleadoSupervisionScreen(idEmpleado = idEmpleado)
         }
     }
 }

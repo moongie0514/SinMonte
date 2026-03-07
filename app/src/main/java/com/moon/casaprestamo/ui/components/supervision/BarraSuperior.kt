@@ -63,24 +63,16 @@ internal fun BarraSuperior(
             modifier            = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // KPI RECAUDACIÓN — restringido para empleados
-            if (esAdmin) {
-                KpiCard(
-                    titulo     = "RECAUDACIÓN",
-                    valor      = if (recaudacionCargando) "CARGANDO…" else "\$${String.format("%,.0f", recaudacion)}",
-                    icono      = Icons.Default.AttachMoney,
-                    color      = Verde,
-                    isSelected = tabActual != SupervisionTab.SOLICITUDES,
-                    onClick    = onClickRecaudacion,
-                    modifier   = Modifier.weight(1f)
-                )
-            } else {
-                // Tarjeta bloqueada para empleados
-                KpiCardBloqueada(
-                    titulo   = "RECAUDACIÓN",
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            // KPI RECAUDACIÓN — visible para todos los roles
+            KpiCard(
+                titulo     = "RECAUDACIÓN",
+                valor      = if (recaudacionCargando) "CARGANDO…" else "\$${String.format("%,.0f", recaudacion)}",
+                icono      = Icons.Default.AttachMoney,
+                color      = Verde,
+                isSelected = tabActual != SupervisionTab.SOLICITUDES,
+                onClick    = onClickRecaudacion,
+                modifier   = Modifier.weight(1f)
+            )
 
             // KPI SOLICITUDES — solo visible para Admin
             if (esAdmin) {

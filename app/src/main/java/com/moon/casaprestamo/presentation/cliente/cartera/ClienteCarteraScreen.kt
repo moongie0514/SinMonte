@@ -14,8 +14,8 @@ fun ClienteCarteraScreen(
     idCliente: Int,
     viewModel: ClienteCarteraViewModel = hiltViewModel()
 ) {
-    val uiState      by viewModel.uiState.collectAsState()
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val uiState        by viewModel.uiState.collectAsState()
+    val lifecycleOwner  = LocalLifecycleOwner.current
 
     LaunchedEffect(idCliente, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -24,9 +24,9 @@ fun ClienteCarteraScreen(
     }
 
     ClienteCarteraContent(
-        uiState  = uiState,
-        onRetry  = { viewModel.cargarCartera(idCliente) },
-        onPagar  = { idPago -> viewModel.registrarPago(idPago) },          // ← NUEVO
-        onLimpiarMensaje = viewModel::limpiarMensajePago                   // ← NUEVO
+        uiState          = uiState,
+        onPagar          = { idPago -> viewModel.registrarPago(idPago) },
+        onToggleExpansion = { idPrestamo -> viewModel.toggleExpansion(idPrestamo) },
+        onLimpiarMensaje = viewModel::limpiarMensajePago
     )
 }

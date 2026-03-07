@@ -1,11 +1,9 @@
 package com.moon.casaprestamo.presentation.admin.cuentas
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.moon.casaprestamo.data.models.CrearEmpleadoRequest
-import com.moon.casaprestamo.data.models.EditarUsuarioAdminRequest
-import com.moon.casaprestamo.data.models.RegistroRequest
-import com.moon.casaprestamo.data.models.UsuarioResumen
+import com.moon.casaprestamo.data.models.*
 import com.moon.casaprestamo.data.network.ApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,9 +15,10 @@ import javax.inject.Inject
 
 data class CuentasUiState(
     val isLoading: Boolean = false,
-    val usuarios: List<UsuarioResumen> = emptyList(),
-    val error: String? = null,
-    val mensaje: String? = null
+    val usuarios:  List<UsuarioResumen> = emptyList(),
+    val error:     String? = null,
+    val mensaje:   String? = null,
+    val esError:   Boolean = false
 )
 
 @HiltViewModel
@@ -46,94 +45,74 @@ class CuentasViewModel @Inject constructor(
         }
     }
 
-    fun crearEmpleado(
-        nombre: String,
-        apellidoPaterno: String,
-        apellidoMaterno: String,
-        email: String,
-        telefono: String,
-        password: String,
-        rol: String
-    ) {
+    fun crearEmpleado(nombre: String, apellidoPaterno: String, apellidoMaterno: String,
+                      email: String, telefono: String, password: String, rol: String) {
         viewModelScope.launch {
             try {
                 val r = apiService.crearEmpleado(
                     CrearEmpleadoRequest(
-                        nombre = nombre,
+                        nombre          = nombre,
                         apellidoPaterno = apellidoPaterno,
                         apellidoMaterno = apellidoMaterno.ifBlank { null },
-                        email = email,
-                        password = password,
-                        telefono = telefono.ifBlank { null },
-                        rol = rol
+                        email           = email,
+                        password        = password,
+                        telefono        = telefono.ifBlank { null },
+                        rol             = rol
                     )
                 )
-                _uiState.update { it.copy(mensaje = if (r.isSuccessful) "Registro creado" else "No se pudo crear") }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(mensaje = "Error al crear") }
+                Log.d("CUENTAS_VM", "crearEmpleado HTTP ${r.code()}")
+                _uiState.update { it.copy(mensaje = if (r.isSuccessful) "✅ Empleado creado" else "No se pudo crear", esError = !r.isSuccessful) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = "Error al crear", esError = true) }
             }
         }
     }
 
-    fun crearCliente(
-        nombre: String,
-        apellidoPaterno: String,
-        apellidoMaterno: String,
-        email: String,
-        telefono: String,
-        curp: String,
-        ine: String,
-        password: String
-    ) {
+    fun crearCliente(nombre: String, apellidoPaterno: String, apellidoMaterno: String,
+                     email: String, telefono: String, curp: String, ine: String, password: String) {
         viewModelScope.launch {
             try {
                 val r = apiService.registrarCliente(
                     RegistroRequest(
-                        nombre = nombre,
-                        apellido_paterno = apellidoPaterno,
-                        apellido_materno = apellidoMaterno.ifBlank { null },
-                        email = email,
-                        password = password,
-                        curp = curp.ifBlank { null },
-                        telefono = telefono.ifBlank { null },
-                        direccion = null,
+                        nombre            = nombre,
+                        apellido_paterno  = apellidoPaterno,
+                        apellido_materno  = apellidoMaterno.ifBlank { null },
+                        email             = email,
+                        password          = password,
+                        curp              = curp.ifBlank { null },
+                        telefono          = telefono.ifBlank { null },
+                        direccion         = null,
                         no_identificacion = ine.ifBlank { null },
-                        fecha_nacimiento = null
+                        fecha_nacimiento  = null
                     )
                 )
-                _uiState.update { it.copy(mensaje = if (r.isSuccessful) "Cliente creado" else "No se pudo crear") }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(mensaje = "Error al crear") }
+                Log.d("CUENTAS_VM", "crearCliente HTTP ${r.code()}")
+                _uiState.update { it.copy(mensaje = if (r.isSuccessful) "✅ Cliente creado" else "No se pudo crear", esError = !r.isSuccessful) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = "Error al crear", esError = true) }
             }
         }
     }
 
-    fun editarUsuario(
-        idUsuario: Int,
-        nombre: String,
-        apellidoPaterno: String,
-        apellidoMaterno: String,
-        telefono: String,
-        curp: String,
-        ine: String
-    ) {
+    fun editarUsuario(idUsuario: Int, nombre: String, apellidoPaterno: String,
+                      apellidoMaterno: String, telefono: String, curp: String, ine: String) {
         viewModelScope.launch {
             try {
                 val r = apiService.editarUsuarioAdmin(
                     idUsuario,
                     EditarUsuarioAdminRequest(
-                        nombre = nombre,
+                        nombre          = nombre,
                         apellidoPaterno = apellidoPaterno,
                         apellidoMaterno = apellidoMaterno.ifBlank { null },
-                        telefono = telefono.ifBlank { null },
-                        direccion = null,
-                        curp = curp.ifBlank { null },
+                        telefono        = telefono.ifBlank { null },
+                        direccion       = null,
+                        curp            = curp.ifBlank { null },
                         noIdentificacion = ine.ifBlank { null }
                     )
                 )
-                _uiState.update { it.copy(mensaje = if (r.isSuccessful) "Usuario actualizado" else "No se pudo actualizar") }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(mensaje = "Error al actualizar") }
+                _uiState.update { it.copy(mensaje = if (r.isSuccessful) "✅ Usuario actualizado" else "No se pudo actualizar", esError = !r.isSuccessful) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = "Error al actualizar", esError = true) }
             }
         }
     }
@@ -142,9 +121,9 @@ class CuentasViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val r = apiService.cambiarEstadoUsuario(idUsuario, activo)
-                _uiState.update { it.copy(mensaje = if (r.isSuccessful) "Estado actualizado" else "No se pudo actualizar estado") }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(mensaje = "Error al cambiar estado") }
+                _uiState.update { it.copy(mensaje = if (r.isSuccessful) "✅ Estado actualizado" else "No se pudo actualizar estado", esError = !r.isSuccessful) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(mensaje = "Error al cambiar estado", esError = true) }
             }
         }
     }

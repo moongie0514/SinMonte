@@ -75,6 +75,11 @@ interface ApiService {
         @Body request: ActualizarPerfilRequest
     ): Response<GenericResponse>
 
+    @GET("cliente/{id_cliente}/elegibilidad")
+    suspend fun verificarElegibilidad(
+        @Path("id_cliente") idCliente: Int
+    ): Response<ElegibilidadResponse>
+
     // ── ADMIN ─────────────────────────────────────────────────────────
 
     // 12. Lista de usuarios (filtrable por rol)

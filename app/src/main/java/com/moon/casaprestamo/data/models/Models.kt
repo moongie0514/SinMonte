@@ -178,7 +178,8 @@ data class PagoData(
     @SerializedName("monto")             val monto: Double,
     @SerializedName("fecha_vencimiento") val fechaVencimiento: String,
     @SerializedName("fecha_pago")        val fechaPago: String?,
-    @SerializedName("estado")            val estado: String          // "pagado" | "pendiente" | "atrasado"
+    @SerializedName("estado")            val estado: String,          // "pagado" | "pendiente" | "atrasado"
+    val esPagable: Boolean = false
 )
 data class RegistrarPagoClienteRequest(
     @SerializedName("id_pago")     val idPago:     Int,
@@ -308,7 +309,9 @@ data class PagoPendiente(
     @SerializedName("nombre_cliente")    val nombre_cliente: String? = null,
     val nombre: String? = null,
     @SerializedName("apellido_paterno")  val apellidoPaterno: String? = null,
-    val telefono: String? = null
+    val telefono: String? = null,
+    @SerializedName("curp") val curp: String? = null,
+    @SerializedName("estado_prestamo") val estadoPrestamo: String? = null,
 ) {
     val nombreClienteUi: String
         get() = when {
@@ -379,4 +382,10 @@ data class GenericResponse(
     val status: String,
     val message: String? = null,
     val detail: String? = null
+)
+data class ElegibilidadResponse(
+    @SerializedName("puede_solicitar") val puedeSolicitar: Boolean,
+    @SerializedName("motivo")          val motivo:         String?,
+    @SerializedName("pagos_realizados")val pagosRealizados:Int?,
+    @SerializedName("plazo_meses")     val plazoMeses:     Int?
 )

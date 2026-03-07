@@ -8,6 +8,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,6 +36,12 @@ fun SolicitarPrestamoContent(
     onBack: () -> Unit
 ) {
     val colorScheme  = MaterialTheme.colorScheme
+    // ══════════════════════════════════════════════════════════════════
+// Agrega esto al INICIO del body de SolicitarPrestamoContent,
+// justo después de declarar colorScheme y antes del Column principal
+// ══════════════════════════════════════════════════════════════════
+
+
     val tasaInteres  = state.tasaConfigurada
     val montoNum     = state.monto.toDoubleOrNull() ?: 0.0
 
@@ -57,23 +65,26 @@ fun SolicitarPrestamoContent(
         )
 
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically, // Mantiene el centro vertical
             modifier          = Modifier.padding(vertical = 8.dp)
         ) {
             Text(
                 text       = "$",
                 fontSize   = 32.sp,
                 fontWeight = FontWeight.Black,
-                color      = colorScheme.primary
+                color      = colorScheme.primary,
+                modifier   = Modifier.padding(top = 4.dp) // Pequeño ajuste manual para nivelar
             )
             TextField(
                 value         = state.monto,
                 onValueChange = onMontoChange,
                 modifier      = Modifier.fillMaxWidth(),
                 textStyle     = LocalTextStyle.current.copy(
-                    fontSize   = 40.sp,
-                    fontWeight = FontWeight.Black,
-                    color      = colorScheme.onBackground
+                    fontSize      = 32.sp,
+                    fontWeight    = FontWeight.Black,
+                    color         = colorScheme.onBackground,
+                    textAlign     = TextAlign.Start,
+                    lineHeight    = 32.sp // Fuerza a que la altura de línea coincida con el tamaño de fuente
                 ),
                 colors        = TextFieldDefaults.colors(
                     focusedContainerColor   = Color.Transparent,
@@ -83,12 +94,18 @@ fun SolicitarPrestamoContent(
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
                 placeholder   = {
-                    Text("0", fontSize = 40.sp, fontWeight = FontWeight.Black, color = colorScheme.outline.copy(alpha = 0.3f))
+                    Text(
+                        "0",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Black,
+                        color = colorScheme.outline.copy(alpha = 0.3f),
+                         // Ajuste fino para el placeholder
+                    )
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true // Evita que crezca verticalmente y rompa la alineación
             )
         }
-
         Text(
             text       = "LÍMITE: $${state.montoMinimoPermitido.toLong()} – $${state.montoMaximoPermitido.toLong()}",
             fontSize   = 11.sp,
@@ -235,6 +252,108 @@ fun SolicitarPrestamoContent(
                 color     = MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.Bold
             )
+        }
+    }
+}
+
+// ── Composable de bloqueo — puedes ponerlo al final del mismo archivo ──
+
+@Composable
+fun BloqueoSolicitudScreen(
+    progresoActual:    Float,
+    progresoRequerido: Float
+) {
+    val faltante = (progresoRequerido - progresoActual).coerceAtLeast(0f)
+
+    Box(
+        modifier         = Modifier.fillMaxSize().padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Ícono candado
+            Surface(
+                modifier = Modifier.size(80.dp),
+                shape    = RoundedCornerShape(20.dp),
+                color    = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint     = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                "No puedes solicitar un nuevo crédito",
+                style     = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                "Para solicitar otro crédito necesitas tener pagado\nel 50% de tu crédito más reciente.",
+                style     = MaterialTheme.typography.bodySmall,
+                color     = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // Barra de progreso
+            Column(
+                modifier            = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                LinearProgressIndicator(
+                    progress   = { progresoActual },
+                    modifier   = Modifier.fillMaxWidth().height(8.dp),
+                    color      = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    strokeCap  = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "0%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    Text(
+                        "50% requerido",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        "100%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+
+            // Texto de progreso — igual que la imagen
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    "Progreso actual: ${"%.1f".format(progresoActual * 100)}% — " +
+                            "Te falta ${"%.1f".format(faltante * 100)}%",
+                    modifier  = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    style     = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

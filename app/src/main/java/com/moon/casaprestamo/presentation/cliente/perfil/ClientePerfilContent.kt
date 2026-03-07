@@ -13,135 +13,215 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.moon.casaprestamo.ui.theme.CasaPrestamoTheme
 
 @Composable
 fun ClientePerfilContent(
-    uiState: ClientePerfilUiState,
-    onEditarClick: () -> Unit,
-    modifier: Modifier = Modifier
+    uiState:                 ClientePerfilUiState,
+    onNombreChange:          (String) -> Unit,
+    onApellidoPaternoChange: (String) -> Unit,
+    onApellidoMaternoChange: (String) -> Unit,
+    onTelefonoChange:        (String) -> Unit,
+    onDireccionChange:       (String) -> Unit,
+    onGuardar:               () -> Unit,
+    onLimpiarMensaje:        () -> Unit,
+    modifier:                Modifier = Modifier
 ) {
     var isEditing by remember { mutableStateOf(false) }
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background) // Fondo dinámico
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Top
-    ) {
-        // --- SECCIÓN DE CONTACTO ---
-        Text(
-            text = "Contacto y Ubicación",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
-            color = MaterialTheme.colorScheme.primary, // Color rojo del tema
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+    val snackbarState = remember { SnackbarHostState() }
 
-        PerfilItem("Nombre Completo", uiState.nombreCompleto, isEditing = isEditing)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-        PerfilItem("Correo Electrónico", uiState.email, isEditing = isEditing)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-        PerfilItem("Teléfono", uiState.telefono, isEditing = isEditing)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-        PerfilItem("Dirección Completa", uiState.direccion, isEditing = isEditing)
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // --- SECCIÓN DE INFORMACIÓN PROTEGIDA ---
-        Text(
-            text = "Información Personal",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        PerfilItem("CURP", uiState.curp, isProtected = true, isEditing = isEditing)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-        PerfilItem("Número de INE", uiState.numeroIne, isProtected = true, isEditing = isEditing)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-        PerfilItem("Fecha de Nacimiento", uiState.fechaNacimiento, isProtected = true, isEditing = isEditing)
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        if (isEditing) {
-            // ADVERTENCIA DINÁMICA: Usa InverseSurface para que sea oscura en Light y clara en Dark
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.inverseSurface, // Cambia según el tema
-                        RoundedCornerShape(16.dp)
-                    )
-                    .padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.Shield,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.inversePrimary // Contraste dinámico
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "LOS CAMPOS DE CURP, IDENTIFICACIÓN Y NACIMIENTO ESTÁN PROTEGIDOS. PARA CAMBIOS CRÍTICOS ACUDE A SUCURSAL.",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Black,
-                        fontSize = 9.sp,
-                        lineHeight = 14.sp,
-                        letterSpacing = 1.sp
-                    ),
-                    color = MaterialTheme.colorScheme.inverseOnSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = { isEditing = false },
-                    modifier = Modifier.weight(1f).height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline) // Borde dinámico
-                ) {
-                    Text("CANCELAR", fontWeight = FontWeight.Black)
-                }
-                Button(
-                    onClick = { isEditing = false },
-                    modifier = Modifier.weight(2f).height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("GUARDAR", fontWeight = FontWeight.Black)
-                }
-            }
-        } else {
-            Button(
-                onClick = { isEditing = true },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Text("EDITAR", fontWeight = FontWeight.Black)
-            }
+    // Mostrar mensaje de éxito o error en Snackbar
+    LaunchedEffect(uiState.mensaje) {
+        uiState.mensaje?.let {
+            snackbarState.showSnackbar(it)
+            onLimpiarMensaje()
+            // Si guardó correctamente, salir del modo edición
+            if (!uiState.esError) isEditing = false
         }
-        Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarState) }) { padding ->
+        if (uiState.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+            return@Scaffold
+        }
+
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Top
+        ) {
+
+            // ── SECCIÓN CONTACTO Y UBICACIÓN ─────────────────────
+            Text(
+                text     = "Contacto y Ubicación",
+                style    = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
+                color    = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            PerfilItem(
+                label         = "Nombre(s)",
+                value         = uiState.nombre,
+                isEditing     = isEditing,
+                onValueChange = onNombreChange
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            PerfilItem(
+                label         = "Apellido Paterno",
+                value         = uiState.apellidoPaterno,
+                isEditing     = isEditing,
+                onValueChange = onApellidoPaternoChange
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            PerfilItem(
+                label         = "Apellido Materno",
+                value         = uiState.apellidoMaterno,
+                isEditing     = isEditing,
+                onValueChange = onApellidoMaternoChange
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            PerfilItem(
+                label         = "Correo Electrónico",
+                value         = uiState.email,
+                isProtected   = true,
+                isEditing     = isEditing
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            PerfilItem(
+                label         = "Teléfono Celular",
+                value         = uiState.telefono,
+                isEditing     = isEditing,
+                onValueChange = onTelefonoChange
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            PerfilItem(
+                label         = "Dirección Completa",
+                value         = uiState.direccion,
+                isEditing     = isEditing,
+                onValueChange = onDireccionChange
+            )
+
+            Spacer(Modifier.height(32.dp))
+
+            // ── SECCIÓN INFORMACIÓN PROTEGIDA ────────────────────
+            Text(
+                text     = "Información Personal",
+                style    = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
+                color    = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            PerfilItem("CURP",                uiState.curp,            isProtected = true, isEditing = isEditing)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            PerfilItem("Número de INE",       uiState.numeroIne,       isProtected = true, isEditing = isEditing)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            PerfilItem("Fecha de Nacimiento", uiState.fechaNacimiento, isProtected = true, isEditing = isEditing)
+
+            Spacer(Modifier.height(40.dp))
+
+            // ── ADVERTENCIA Y BOTONES ────────────────────────────
+            if (isEditing) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.inverseSurface,
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Shield,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.inversePrimary
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text  = "LOS CAMPOS DE CURP, IDENTIFICACIÓN Y NACIMIENTO ESTÁN PROTEGIDOS. PARA CAMBIOS CRÍTICOS ACUDE A SUCURSAL.",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight    = FontWeight.Black,
+                            fontSize      = 9.sp,
+                            lineHeight    = 14.sp,
+                            letterSpacing = 1.sp
+                        ),
+                        color = MaterialTheme.colorScheme.inverseOnSurface
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick  = { isEditing = false },
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Text("CANCELAR", fontWeight = FontWeight.Black)
+                    }
+
+                    Button(
+                        onClick  = onGuardar,
+                        modifier = Modifier.weight(2f).height(56.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        enabled  = !uiState.isSaving
+                    ) {
+                        if (uiState.isSaving) {
+                            CircularProgressIndicator(
+                                modifier    = Modifier.size(22.dp),
+                                strokeWidth = 2.dp,
+                                color       = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("GUARDAR", fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            } else {
+                Button(
+                    onClick  = { isEditing = true },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("EDITAR PERFIL", fontWeight = FontWeight.Black)
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }
 
 @Composable
 fun PerfilItem(
-    label: String,
-    value: String,
-    isProtected: Boolean = false,
-    isEditing: Boolean = false,
+    label:         String,
+    value:         String,
+    isProtected:   Boolean = false,
+    isEditing:     Boolean = false,
     onValueChange: (String) -> Unit = {}
 ) {
     Column(
@@ -150,73 +230,48 @@ fun PerfilItem(
             .padding(vertical = 10.dp)
     ) {
         Text(
-            text = label.uppercase(),
+            text  = label.uppercase(),
             style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Black,
+                fontWeight    = FontWeight.Black,
                 letterSpacing = 1.5.sp
             ),
             color = MaterialTheme.colorScheme.outline
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(Modifier.height(4.dp))
 
         if (isEditing && !isProtected) {
-            // Campo editable cuando se activa la edición
             OutlinedTextField(
-                value = value,
+                value         = value,
                 onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                modifier      = Modifier.fillMaxWidth(),
+                shape         = RoundedCornerShape(12.dp),
+                textStyle     = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                colors        = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                 )
             )
         } else {
-            // Vista normal o campo protegido
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
+                    text  = value.ifBlank { "—" },
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                     color = if (isProtected && isEditing)
                         MaterialTheme.colorScheme.outline
-                    else MaterialTheme.colorScheme.onBackground
+                    else
+                        MaterialTheme.colorScheme.onBackground
                 )
                 if (isProtected) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(Modifier.width(8.dp))
                     Icon(
-                        imageVector = Icons.Default.Lock,
+                        imageVector        = Icons.Default.Lock,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        modifier = Modifier.size(14.dp)
+                        tint               = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        modifier           = Modifier.size(14.dp)
                     )
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewClientePerfilContent() {
-    CasaPrestamoTheme (darkTheme = true){
-        ClientePerfilContent(
-            uiState = ClientePerfilUiState(
-                idCliente = 1,
-                nombreCompleto = "Juan Pérez García",
-                curp = "PEGJ900101HDFRNN09",
-                numeroIne = "1234567890123",
-                fechaNacimiento = "01 de Enero, 1990",
-                telefono = "81 1234 5678",
-                email = "juan.perez@mail.com",
-                direccion = "Av. Constitución 123, Monterrey",
-                fechaRegistro = "15 de Enero, 2026"
-            ),
-            modifier = Modifier.padding(24.dp),
-            onEditarClick = {}
-        )
     }
 }

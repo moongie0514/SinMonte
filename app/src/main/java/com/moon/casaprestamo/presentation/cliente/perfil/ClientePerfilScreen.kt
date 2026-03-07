@@ -18,7 +18,13 @@ fun ClientePerfilScreen(
     }
 
     ClientePerfilContent(
-        uiState = uiState,
-        onEditarClick = { /* TODO: Implementar edición */ }
+        uiState                = uiState,
+        onNombreChange         = viewModel::onNombreChange,
+        onApellidoPaternoChange = viewModel::onApellidoPaternoChange,
+        onApellidoMaternoChange = viewModel::onApellidoMaternoChange,
+        onTelefonoChange       = viewModel::onTelefonoChange,
+        onDireccionChange      = viewModel::onDireccionChange,
+        onGuardar              = viewModel::guardarPerfil,
+        onLimpiarMensaje       = viewModel::limpiarMensaje
     )
 }
